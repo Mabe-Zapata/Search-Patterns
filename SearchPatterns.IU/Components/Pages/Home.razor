@@ -1,0 +1,79 @@
+@page "/"
+
+<PageTitle>Problemas de Búsqueda en Espacio de Estados</PageTitle>
+
+<header class="mb-12 max-w-4xl">
+<h1 class="text-4xl font-extrabold text-on-surface font-headline tracking-tight mb-4">Problemas de Búsqueda de Espacio de Estados</h1>
+<p class="text-lg text-on-surface-variant font-body leading-relaxed">
+    Explora acertijos algorítmicos fundamentales. Estos problemas demuestran cómo las estrategias de búsqueda recorren espacios de estados para encontrar soluciones óptimas en entornos discretos.
+</p>
+</header>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-1 md:grid-cols-6 lg:grid-cols-12 gap-6">
+<!-- Card 1: Jarras de Agua (Large Feature) -->
+<div class="md:col-span-6 lg:col-span-8 bg-surface-container-lowest rounded-xl p-8 flex flex-col justify-between shadow-[0_12px_40px_rgba(25,28,30,0.06)] group hover:translate-y-[-2px] transition-all duration-300">
+<div class="flex justify-between items-start">
+<div class="w-16 h-16 rounded-2xl bg-primary-fixed flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-4xl" data-icon="water_drop">water_drop</span>
+</div>
+</div>
+<div class="mt-8">
+<h3 class="text-2xl font-bold text-on-surface font-headline mb-3">Problema de las Jarras de Agua</h3>
+<p class="text-on-surface-variant leading-relaxed max-w-md">
+                        Mide exactamente una cantidad objetivo utilizando dos jarras. Un problema clásico de transiciones de estado y búsqueda en grafos.
+                    </p>
+</div>
+<div class="mt-10 flex items-center gap-4">
+<a href="/waterjug" class="bg-gradient-to-r from-primary to-primary-container text-on-primary px-6 py-3 rounded-md font-semibold text-sm transition-transform active:scale-95">Ver Algoritmo</a>
+</div>
+</div>
+<!-- Card 2: Misioneros y Caníbales (Small) -->
+<div class="md:col-span-3 lg:col-span-4 bg-surface-container-lowest rounded-xl p-6 flex flex-col shadow-[0_12px_40px_rgba(25,28,30,0.06)] group hover:bg-secondary-fixed transition-all duration-300">
+<div class="w-12 h-12 rounded-xl bg-tertiary-fixed flex items-center justify-center text-tertiary mb-6">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+</div>
+<h3 class="text-xl font-bold text-on-surface font-headline mb-2">Misioneros y Caníbales</h3>
+<p class="text-sm text-on-surface-variant font-body mb-8">
+                    Cruza el río sin que los misioneros sean superados en número por los caníbales en ninguna orilla.
+                </p>
+<button class="mt-auto w-full py-3 border border-outline-variant/15 rounded-md text-sm font-semibold text-primary hover:bg-white/50 transition-colors">Ver Algoritmo</button>
+</div>
+<!-- Card 3: Lobo, Cabra y Col (Small) -->
+<div class="md:col-span-3 lg:col-span-4 bg-surface-container-lowest rounded-xl p-6 flex flex-col shadow-[0_12px_40px_rgba(25,28,30,0.06)] group hover:bg-secondary-fixed transition-all duration-300">
+<div class="w-12 h-12 rounded-xl bg-primary-fixed-dim flex items-center justify-center text-primary mb-6">
+<span class="material-symbols-outlined" data-icon="Pets">pets</span>
+</div>
+<h3 class="text-xl font-bold text-on-surface font-headline mb-2">Lobo, Cabra y Col</h3>
+<p class="text-sm text-on-surface-variant font-body mb-8">
+                    Transporta a los tres de forma segura. El lobo se come a la cabra, y la cabra se come a la col si se quedan solos.
+                </p>
+<button class="mt-auto w-full py-3 border border-outline-variant/15 rounded-md text-sm font-semibold text-primary hover:bg-white/50 transition-colors">Ver Algoritmo</button>
+</div>
+<!-- Card 4: Coloreo de Mapas (Medium) -->
+<div class="md:col-span-3 lg:col-span-4 bg-surface-container-lowest rounded-xl p-6 flex flex-col shadow-[0_12px_40px_rgba(25,28,30,0.06)] group hover:bg-secondary-fixed transition-all duration-300">
+<div class="w-12 h-12 rounded-xl bg-tertiary-fixed-dim flex items-center justify-center text-tertiary-container mb-6">
+<span class="material-symbols-outlined" data-icon="palette">palette</span>
+</div>
+<h3 class="text-xl font-bold text-on-surface font-headline mb-2">Coloreo de Mapas</h3>
+<p class="text-sm text-on-surface-variant font-body mb-8">
+                    Asigna colores a regiones de un mapa de modo que regiones adyacentes no compartan el mismo color.
+                </p>
+<button class="mt-auto w-full py-3 border border-outline-variant/15 rounded-md text-sm font-semibold text-primary hover:bg-white/50 transition-colors">Ver Algoritmo</button>
+</div>
+<!-- Card 5: Búsqueda de Rutas (Wide Feature) -->
+<div class="md:col-span-6 lg:col-span-4 bg-surface-container-lowest rounded-xl p-6 flex flex-col shadow-[0_12px_40px_rgba(25,28,30,0.06)] group relative overflow-hidden transition-all duration-300 hover:translate-y-[-2px]">
+<div class="absolute top-0 right-0 w-32 h-32 opacity-10 pointer-events-none">
+<img alt="Map pattern" class="w-full h-full object-contain rotate-12" data-alt="minimalist abstract topographical map lines in soft blue and grey tones on white background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBnw_GfbpXoiNZEV9aTO2MV1AY5pqWzoQ0a7ECuKtYPqNbvGYWsBI7k4ztU1e6hKzkNiwL1XsnwIuvwnpU9M9134MLfTaMm9Hh6sY3oojzLomRDA7Kp9zop_Xy967UBvZAaPpA4hx08qUOv6ychD67f3m-ieUp9bhh2qWnrVCwfoO-8KTeeBaeg0SFN2x6L0WoIWilvditWWnMDJ31HD2-J1qatl9dn9fEpmHkH7o8o1LUaCl1deDq4VdiyUbPsORk6jV4SjUIgI-fR"/>
+</div>
+<div class="w-12 h-12 rounded-xl bg-primary text-on-primary flex items-center justify-center mb-6">
+<span class="material-symbols-outlined" data-icon="map">map</span>
+</div>
+<h3 class="text-xl font-bold text-on-surface font-headline mb-2">Búsqueda de Rutas</h3>
+<p class="text-sm text-on-surface-variant font-body mb-8">
+                    Implementación de algoritmos A* y Dijkstra para encontrar el camino más corto entre dos puntos en un grafo complejo.
+                </p>
+<button class="mt-auto bg-primary text-on-primary py-3 rounded-md text-sm font-semibold hover:bg-primary-container transition-colors">Ver Algoritmo</button>
+</div>
+</div>
+
+

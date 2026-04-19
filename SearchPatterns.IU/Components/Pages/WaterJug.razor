@@ -1,0 +1,301 @@
+@page "/waterjug"
+@using SearchPatterns.Application.WaterJug.DTOs
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Problema de las Jarras de Agua | ScholarlyEdge</PageTitle>
+
+<div class="breadcrumb">
+    <span>Biblioteca</span> <span class="separator">></span> <span class="active">Problema de Jarras de Agua</span>
+</div>
+
+<div class="header-section">
+    <h1>Problema de las Jarras de Agua</h1>
+    <p class="subtitle">Un problema clásico de búsqueda en espacio de estados. Dadas dos jarras con capacidades específicas y un suministro de agua ilimitado, logra una cantidad objetivo usando tres acciones posibles: llenar, vaciar o transferir.</p>
+</div>
+
+<div class="waterjug-layout">
+    <div class="simulation-column">
+        <div class="simulation-card">
+            @if (Solution != null && Solution.IsSolvable)
+            {
+                <span class="badge active">SIMULACIÓN ACTIVA</span>
+            }
+            else
+            {
+                <span class="badge inactive">SIMULACIÓN INACTIVA</span>
+            }
+
+            <div class="jugs-container">
+                <!-- Jarra A -->
+                <div class="jug-wrapper">
+                    <div class="jug" style="height: 240px; width: 120px;">
+                        <div class="water" style="height: @(GetPercentageA())%">
+                            <span class="water-text">@(CurrentJugA)L</span>
+                        </div>
+                        <span class="capacity-text">@(JugACapacity)L</span>
+                    </div>
+                    <div class="jug-info">
+                        <h3>Jarra A</h3>
+                        <p>Capacidad: @(JugACapacity)L | Actual: @(CurrentJugA)L</p>
+                    </div>
+                </div>
+
+                <!-- Jarra B -->
+                <div class="jug-wrapper">
+                    <div class="jug" style="height: 300px; width: 150px;">
+                        <div class="water" style="height: @(GetPercentageB())%">
+                            <span class="water-text">@(CurrentJugB)L</span>
+                        </div>
+                        <span class="capacity-text">@(JugBCapacity)L</span>
+                    </div>
+                    <div class="jug-info">
+                        <h3>Jarra B</h3>
+                        <p>Capacidad: @(JugBCapacity)L | Actual: @(CurrentJugB)L</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="parameters-column">
+        <div class="parameters-card">
+            <div class="card-title">
+                Parámetros
+            </div>
+            
+            <EditForm Model="this" OnValidSubmit="SolveAsync">
+                <div class="form-group">
+                    <label>CAPACIDAD JARRA A (L)</label>
+                    <InputNumber @bind-Value="JugACapacity" class="form-control" min="1" max="100" />
+                </div>
+                
+                <div class="form-group">
+                    <label>CAPACIDAD JARRA B (L)</label>
+                    <InputNumber @bind-Value="JugBCapacity" class="form-control" min="1" max="100" />
+                </div>
+                
+                <div class="form-group">
+                    <label>CANTIDAD OBJETIVO (L)</label>
+                    <InputNumber @bind-Value="TargetAmount" class="form-control" min="1" max="100" />
+                </div>
+
+                <button type="submit" class="btn btn-primary fluid" disabled="@IsLoading">
+                    @(IsLoading ? "Resolviendo..." : "Iniciar Búsqueda BFS")
+                </button>
+            </EditForm>
+            
+            @if (!string.IsNullOrEmpty(ErrorMessage))
+            {
+                <div class="error-message mt-3">@ErrorMessage</div>
+            }
+        </div>
+
+        <div class="insight-card">
+            <div class="insight-content">
+                <h4>Nota del Curador</h4>
+                <p>El problema tiene solución si y solo si la meta <strong>d</strong> es un múltiplo del máximo común divisor de <strong>a</strong> y <strong>b</strong>.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (Solution != null && Solution.IsSolvable)
+{
+    <div class="trace-section">
+        <div class="trace-header">
+            <h2>Traza de Ejecución</h2>
+            <div class="trace-actions">
+                <button class="btn btn-outline">Exportar Registro</button>
+                <button class="btn btn-primary" @onclick="ToggleAutoPlay">
+                    @(IsAutoPlaying ? "Detener Autoplay" : "Reproducción Automática")
+                </button>
+            </div>
+        </div>
+
+        <div class="trace-list">
+            @for (int i = 0; i <= CurrentStepIndex; i++)
+            {
+                var step = Solution.Steps[i];
+                <div class="trace-item @(i == CurrentStepIndex ? "active" : "")">
+                    <div class="step-number">@step.StepNumber.ToString("D2")</div>
+                    <div class="step-details">
+                        <div class="step-title">
+                            @GetOperationDisplayName(step.Operation) 
+                            <span class="step-badge">ACCIÓN</span>
+                        </div>
+                        <div class="step-description">@step.Description</div>
+                    </div>
+                    <div class="step-state">
+                        <div class="state-col">
+                            <span class="state-label">JARRA A</span>
+                            <span class="state-value">@(step.JugAAmount)L</span>
+                        </div>
+                        <div class="state-col">
+                            <span class="state-label">JARRA B</span>
+                            <span class="state-value">@(step.JugBAmount)L</span>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (CurrentStepIndex < Solution.Steps.Count - 1)
+            {
+                <div class="trace-placeholder">
+                    <span class="dots">•••</span>
+                    <p>Los pasos adicionales aparecerán aquí durante la ejecución...</p>
+                </div>
+            }
+            else
+            {
+                <div class="trace-complete">
+                    <span class="dots success">✓</span>
+                    <p>¡Objetivo Alcanzado!</p>
+                </div>
+            }
+        </div>
+        
+        <div class="navigation-controls mt-3 d-flex justify-content-center" style="gap: 10px;">
+            <button class="btn btn-outline" @onclick="PrevStep" disabled="@(CurrentStepIndex <= 0)">◀ Anterior</button>
+            <button class="btn btn-primary" @onclick="NextStep" disabled="@(CurrentStepIndex >= Solution.Steps.Count - 1)">Siguiente ▶</button>
+        </div>
+    </div>
+}
+
+@code {
+    public int JugACapacity { get; set; } = 4;
+    public int JugBCapacity { get; set; } = 5;
+    public int TargetAmount { get; set; } = 2;
+    
+    public double CurrentJugA { get; set; } = 0;
+    public double CurrentJugB { get; set; } = 0;
+
+    public SolveResponseDto? Solution { get; set; }
+    public string? ErrorMessage { get; set; }
+    public bool IsLoading { get; set; }
+    
+    public int CurrentStepIndex { get; set; } = -1;
+    private bool IsAutoPlaying { get; set; } = false;
+
+    protected override void OnInitialized()
+    {
+        CurrentJugA = 0;
+        CurrentJugB = 0;
+    }
+
+    private async Task SolveAsync()
+    {
+        IsLoading = true;
+        ErrorMessage = null;
+        Solution = null;
+        CurrentStepIndex = -1;
+        IsAutoPlaying = false;
+        CurrentJugA = 0;
+        CurrentJugB = 0;
+
+        try
+        {
+            var request = new SolveRequestDto
+            {
+                JugACapacity = JugACapacity,
+                JugBCapacity = JugBCapacity,
+                TargetAmount = TargetAmount
+            };
+
+            var response = await Http.PostAsJsonAsync("api/waterjug/solve", request);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                Solution = await response.Content.ReadFromJsonAsync<SolveResponseDto>();
+                
+                if (Solution != null && !Solution.IsSolvable)
+                {
+                    ErrorMessage = Solution.ErrorMessage ?? "No existe solución para los parámetros dados.";
+                }
+                else if (Solution?.Steps?.Count > 0)
+                {
+                    CurrentStepIndex = 0;
+                    UpdateJugsFromStep();
+                }
+            }
+            else
+            {
+                ErrorMessage = "Error al llamar a la API. Falló la validación o hay un problema en el servidor.";
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private void UpdateJugsFromStep()
+    {
+        if (Solution?.Steps != null && CurrentStepIndex >= 0 && CurrentStepIndex < Solution.Steps.Count)
+        {
+            var step = Solution.Steps[CurrentStepIndex];
+            CurrentJugA = step.JugAAmount;
+            CurrentJugB = step.JugBAmount;
+        }
+    }
+
+    private void NextStep()
+    {
+        if (Solution?.Steps != null && CurrentStepIndex < Solution.Steps.Count - 1)
+        {
+            CurrentStepIndex++;
+            UpdateJugsFromStep();
+        }
+        else
+        {
+            IsAutoPlaying = false;
+        }
+    }
+
+    private void PrevStep()
+    {
+        if (CurrentStepIndex > 0)
+        {
+            CurrentStepIndex--;
+            UpdateJugsFromStep();
+            IsAutoPlaying = false; 
+        }
+    }
+
+    private async Task ToggleAutoPlay()
+    {
+        IsAutoPlaying = !IsAutoPlaying;
+        
+        while (IsAutoPlaying && Solution?.Steps != null && CurrentStepIndex < Solution.Steps.Count - 1)
+        {
+            NextStep();
+            StateHasChanged();
+            await Task.Delay(800); 
+        }
+        
+        IsAutoPlaying = false;
+    }
+
+    private double GetPercentageA() => JugACapacity > 0 ? (CurrentJugA / JugACapacity) * 100 : 0;
+    private double GetPercentageB() => JugBCapacity > 0 ? (CurrentJugB / JugBCapacity) * 100 : 0;
+
+    private string GetOperationDisplayName(string op)
+    {
+        return op switch
+        {
+            "FillA" => "Llenar Jarra A",
+            "FillB" => "Llenar Jarra B",
+            "EmptyA" => "Vaciar Jarra A",
+            "EmptyB" => "Vaciar Jarra B",
+            "PourAToB" => "Verter A en B",
+            "PourBToA" => "Verter B en A",
+            "TransferAtoB" => "Transferir de A a B",
+            "TransferBtoA" => "Transferir de B a A",
+            _ => op
+        };
+    }
+}

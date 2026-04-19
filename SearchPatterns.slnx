@@ -1,0 +1,19 @@
+<Solution>
+  <Folder Name="/Core/" />
+  <Folder Name="/Core/Application/">
+    <Project Path="SearchPatterns.Application/SearchPatterns.Application.csproj" />
+  </Folder>
+  <Folder Name="/Core/Domain/">
+    <Project Path="SearchPatterns.Domain/SearchPatterns.Domain.csproj" />
+  </Folder>
+  <Folder Name="/Infrastructure/">
+    <Project Path="SearchPatterns.Infrastructure/SearchPatterns.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/Test/" />
+  <Folder Name="/UI/">
+    <Project Path="SearchPatterns.IU/SearchPatterns.IU.csproj" />
+  </Folder>
+  <Folder Name="/UI/API/">
+    <Project Path="SearchPatterns.API/SearchPatterns.API.csproj" />
+  </Folder>
+</Solution>
