@@ -1,0 +1,458 @@
+﻿
+.breadcrumb {
+    font-size: .85rem;
+    color: #6c757d;
+    margin-bottom: 24px;
+}
+
+    .breadcrumb .separator {
+        margin: 0 8px;
+    }
+
+    .breadcrumb .active {
+        color: #1e3a8a;
+        font-weight: 600;
+    }
+
+.header-section {
+    margin-bottom: 32px;
+    max-width: 800px;
+}
+
+    .header-section h1 {
+        font-size: 2.25rem;
+        font-weight: 800;
+        color: #1a1a2e;
+        margin-bottom: 16px;
+    }
+
+.subtitle {
+    font-size: 1.1rem;
+    color: #495057;
+    line-height: 1.6;
+}
+
+.puzzle-layout {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 24px;
+    margin-bottom: 40px;
+}
+
+
+.scene-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 32px;
+    box-shadow: 0 4px 16px rgba(0,0,0,.05);
+    position: relative;
+    min-height: 400px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.badge {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .05em;
+}
+
+    .badge.active {
+        background: #eef2ff;
+        color: #4361ee;
+    }
+
+    .badge.inactive {
+        background: #f8f9fa;
+        color: #6c757d;
+    }
+
+/* ── River scene ─────────────────────────────────────────────── */
+.river-scene {
+    display: grid;
+    grid-template-columns: 1fr 80px 1fr;
+    gap: 8px;
+    align-items: stretch;
+    flex: 1;
+}
+
+.bank {
+    border-radius: 12px;
+    padding: 20px 16px;
+    min-height: 220px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.bank-left {
+    background: #f0fdf4;
+    border: 2px solid #86efac;
+}
+
+.bank-right {
+    background: #eff6ff;
+    border: 2px solid #93c5fd;
+}
+
+.bank-label {
+    font-size: .75rem;
+    font-weight: 700;
+    color: #374151;
+    text-align: center;
+    letter-spacing: .04em;
+}
+
+.entities {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+}
+
+.entity {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    background: #fff;
+    border-radius: 10px;
+    padding: 8px 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,.06);
+    font-size: 1.8rem;
+    transition: transform .3s ease;
+    min-width: 64px;
+}
+
+    .entity span {
+        font-size: .65rem;
+        font-weight: 600;
+        color: #374151;
+    }
+
+    .entity:hover {
+        transform: scale(1.05);
+    }
+
+
+.river {
+    background: linear-gradient(180deg,#bfdbfe,#60a5fa);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 4px;
+    position: relative;
+    overflow: hidden;
+}
+
+.river-waves {
+    font-size: 1.2rem;
+    opacity: .6;
+}
+
+.river-label {
+    font-size: .6rem;
+    font-weight: 700;
+    color: #1e40af;
+    letter-spacing: .05em;
+}
+
+.boat {
+    font-size: 2rem;
+    transition: transform .6s ease;
+}
+
+.boat-left {
+    transform: translateX(0);
+}
+
+.boat-right {
+    transform: translateX(4px) scaleX(-1);
+}
+
+
+.action-banner {
+    background: #eef2ff;
+    border-radius: 10px;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.action-step {
+    font-size: .7rem;
+    font-weight: 800;
+    color: #4361ee;
+    background: #fff;
+    padding: 4px 10px;
+    border-radius: 8px;
+}
+
+.action-text {
+    font-size: .95rem;
+    font-weight: 600;
+    color: #1a1a2e;
+}
+
+.controls-column {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.controls-card {
+    background: #f8f9fa;
+    border-radius: 16px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.card-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1a1a2e;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.btn {
+    padding: 11px 22px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: .9rem;
+    cursor: pointer;
+    border: none;
+    transition: all .2s;
+}
+
+    .btn.fluid {
+        width: 100%;
+    }
+
+.btn-primary {
+    background: #1e3a8a;
+    color: #fff;
+}
+
+    .btn-primary:hover:not(:disabled) {
+        background: #1e40af;
+    }
+
+    .btn-primary:disabled {
+        opacity: .55;
+        cursor: not-allowed;
+    }
+
+.btn-secondary {
+    background: #6b7280;
+    color: #fff;
+}
+
+    .btn-secondary:hover {
+        background: #4b5563;
+    }
+
+.btn-outline {
+    background: transparent;
+    border: 1px solid #d1d5db;
+    color: #374151;
+}
+
+    .btn-outline:hover:not(:disabled) {
+        background: #f3f4f6;
+    }
+
+    .btn-outline:disabled {
+        opacity: .45;
+        cursor: not-allowed;
+    }
+
+.nav-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.step-counter {
+    font-size: .85rem;
+    font-weight: 700;
+    color: #4361ee;
+}
+
+.error-msg {
+    background: #fef2f2;
+    color: #b91c1c;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: .875rem;
+}
+
+.insight-card {
+    background: #fffbeb;
+    border-radius: 12px;
+    padding: 20px;
+}
+
+    .insight-card h4 {
+        font-size: .95rem;
+        font-weight: 700;
+        color: #b45309;
+        margin-bottom: 8px;
+    }
+
+    .insight-card p {
+        font-size: .82rem;
+        color: #78350f;
+        line-height: 1.55;
+        margin: 0;
+    }
+
+.stats-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    gap: 16px;
+    justify-content: space-around;
+    box-shadow: 0 2px 8px rgba(0,0,0,.04);
+}
+
+.stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #1e3a8a;
+}
+
+.stat-label {
+    font-size: .7rem;
+    color: #6b7280;
+    font-weight: 600;
+}
+
+.trace-section {
+    margin-top: 40px;
+}
+
+.trace-header h2 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin-bottom: 20px;
+}
+
+.trace-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.trace-item {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 18px 24px;
+    display: flex;
+    gap: 24px;
+    align-items: center;
+    transition: border-color .25s, box-shadow .25s;
+}
+
+    .trace-item.active {
+        border-color: #4361ee;
+        box-shadow: 0 4px 14px rgba(67,97,238,.1);
+    }
+
+.step-num {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #fff;
+    background: #4361ee;
+    width: 52px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    flex-shrink: 0;
+}
+
+.step-body {
+    flex: 1;
+}
+
+.step-action {
+    font-weight: 700;
+    font-size: 1rem;
+    color: #1a1a2e;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.badge-small {
+    font-size: .6rem;
+    padding: 3px 7px;
+    border-radius: 8px;
+    background: #f3f4f6;
+    color: #6b7280;
+    font-weight: 700;
+    letter-spacing: .04em;
+}
+
+.step-desc {
+    font-size: .82rem;
+    color: #6b7280;
+}
+
+.step-icons {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: .75rem;
+    color: #374151;
+    font-weight: 600;
+    text-align: right;
+}
+
+.trace-complete {
+    text-align: center;
+    padding: 24px;
+    background: #f0fdf4;
+    border: 2px dashed #86efac;
+    border-radius: 12px;
+    color: #15803d;
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+
+@media (max-width: 768px) {
+    .puzzle-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .river-scene {
+        grid-template-columns: 1fr 60px 1fr;
+    }
+}
