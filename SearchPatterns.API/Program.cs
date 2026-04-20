@@ -12,6 +12,10 @@ builder.Services.AddOpenApi();
 builder.Services.AddScoped<SearchPatterns.Domain.WaterJug.Interfaces.IBfsSolver, SearchPatterns.Application.WaterJug.Services.BfsSolverService>();
 builder.Services.AddScoped<SearchPatterns.Application.WaterJug.Validators.IWaterJugValidator, SearchPatterns.Application.WaterJug.Validators.WaterJugValidator>();
 
+//registe services for FarmerPuzzle
+builder.Services.AddScoped<SearchPatterns.Domain.FarmerPuzzle.Interfaces.IFarmerBfsSolver,
+	SearchPatterns.Application.FarmerPuzzle.Services.FarmerBfsSolverService>();
+
 // Add CORS to allow local front-end requests (required if Blazor makes client-side requests or for Swagger UI)
 builder.Services.AddCors(options =>
 {
