@@ -1,0 +1,456 @@
+@page "/mapcoloring"
+@using SearchPatterns.Application.MapColoring.DTOs
+@using Microsoft.AspNetCore.Components
+@inject HttpClient Http
+
+<PageTitle>Coloreo de Mapas | Algoritmos de Búsqueda</PageTitle>
+
+<div class="breadcrumb">
+    <span>Biblioteca</span>
+    <span class="separator">›</span>
+    <span class="active">Coloreo de Mapas</span>
+</div>
+
+<header class="header-section">
+    <h1>Problema del Coloreo de Mapas</h1>
+    <p class="subtitle">
+        Un problema clásico de satisfacción de restricciones. Dado un grafo que representa regiones de un mapa,
+        asigna colores (máximo 4) de manera que ninguna región adyacente comparta el mismo color.
+        El algoritmo de <strong>Backtracking</strong> explora el espacio de soluciones de forma sistemática.
+    </p>
+</header>
+
+<div class="coloring-layout">
+    
+    <div class="visualization-card">
+        <span class="badge @(Solution is not null && Solution.IsSolvable ? "active" : "inactive")">
+            @(Solution is not null && Solution.IsSolvable ? "SOLUCIÓN ENCONTRADA" : "SIN SOLUCIÓN")
+        </span>
+
+        @if (Solution is not null && Solution.IsSolvable && Solution.ColorAssignment is not null)
+        {
+            <div class="graph-container">
+                @((MarkupString)GetGraphSvg())
+            </div>
+
+            <div class="color-legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #FF6B6B;"></div>
+                    <span>Rojo</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #4ECDC4;"></div>
+                    <span>Azul</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #95E1D3;"></div>
+                    <span>Verde</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #FFE66D;"></div>
+                    <span>Amarillo</span>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="empty-state">
+                <div class="empty-icon">🗺️</div>
+                <p>Configura un grafo y presiona "Resolver" para ver la coloración</p>
+            </div>
+        }
+    </div>
+
+    
+    <div class="controls-column">
+        <div class="controls-card">
+            <div class="card-title">Configuración del Grafo</div>
+
+            <div class="form-group">
+                <label>NÚMERO DE REGIONES</label>
+                <input type="number" class="form-control" 
+                       value="@RegionCount" 
+                       @onchange="@((ChangeEventArgs e) => OnRegionCountChanged(e))"
+                       min="1" max="20" />
+            </div>
+
+            <div class="form-group">
+                <label>EJEMPLO DE GRAFO</label>
+                <select class="form-control" @onchange="LoadExample">
+                    <option value="">-- Seleccionar --</option>
+                    <option value="simple">Mapa Simple (4 regiones)</option>
+                    <option value="australia">Mapa de Australia (7 regiones)</option>
+                    <option value="k4">Grafo Completo K4</option>
+                    <option value="k5">Grafo Completo K5 (No coloreable)</option>
+                </select>
+            </div>
+
+            <div class="matrix-section">
+                <label>MATRIZ DE ADYACENCIA</label>
+                <div class="matrix-scroll">
+                    <table class="adjacency-matrix">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                @for (int j = 0; j < RegionCount; j++)
+                                {
+                                    <th>@j</th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (int i = 0; i < RegionCount; i++)
+                            {
+                                <tr>
+                                    <th>@i</th>
+                                    @for (int j = 0; j < RegionCount; j++)
+                                    {
+                                        var row = i;
+                                        var col = j;
+                                        var isChecked = AdjacencyMatrix[i, j];
+                                        <td>
+                                            <input type="checkbox" 
+                                                   disabled="@(i == j)"
+                                                   checked="@isChecked"
+                                                   @onchange="@(e => ToggleAdjacency(row, col, e))" />
+                                        </td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <button class="btn btn-primary fluid" @onclick="SolveAsync" disabled="@IsLoading">
+                @(IsLoading ? "Resolviendo..." : "▶ Resolver con Backtracking")
+            </button>
+
+            <button class="btn btn-outline fluid" @onclick="ClearGraph">
+                Limpiar Grafo
+            </button>
+
+            @if (!string.IsNullOrEmpty(ErrorMessage))
+            {
+                <div class="error-msg">@ErrorMessage</div>
+            }
+        </div>
+
+        @if (Solution is not null && Solution.Metadata is not null)
+        {
+            <div class="stats-card">
+                <div class="stat">
+                    <span class="stat-value">@Solution.Metadata.BacktrackingSteps</span>
+                    <span class="stat-label">Pasos de Backtracking</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value">@Solution.Metadata.ExecutionTimeMs ms</span>
+                    <span class="stat-label">Tiempo de Ejecución</span>
+                </div>
+            </div>
+        }
+
+        <div class="insight-card">
+            <h4>💡 Teorema de los Cuatro Colores</h4>
+            <p>
+                Todo mapa planar puede ser coloreado con un máximo de 4 colores.
+                El algoritmo de backtracking explora sistemáticamente las asignaciones posibles,
+                retrocediendo cuando encuentra conflictos.
+            </p>
+        </div>
+    </div>
+</div>
+
+@if (Solution is not null && Solution.IsSolvable && Solution.ColorAssignment is not null)
+{
+    <section class="results-section">
+        <div class="results-header">
+            <h2>Asignación de Colores</h2>
+        </div>
+        <div class="color-table-container">
+            <table class="color-table">
+                <thead>
+                    <tr>
+                        <th>Región</th>
+                        <th>Color Asignado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var kvp in Solution.ColorAssignment.OrderBy(x => x.Key))
+                    {
+                        <tr>
+                            <td class="region-cell">Región @kvp.Key</td>
+                            <td class="color-cell">
+                                <div class="color-indicator" style="background: @GetColorHexFromName(kvp.Value);"></div>
+                                <span>@GetColorNameInSpanish(kvp.Value)</span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+}
+
+@code {
+    private int RegionCount { get; set; } = 4;
+    private bool[,] AdjacencyMatrix { get; set; } = new bool[4, 4];
+    private SolveResponseDto? Solution { get; set; }
+    private bool IsLoading { get; set; }
+    private string? ErrorMessage { get; set; }
+
+    protected override void OnInitialized()
+    {
+        InitializeMatrix(4);
+    }
+
+    private void InitializeMatrix(int size)
+    {
+        AdjacencyMatrix = new bool[size, size];
+    }
+
+    private void OnRegionCountChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int newCount))
+        {
+            RegionCount = newCount;
+            if (RegionCount < 1) RegionCount = 1;
+            if (RegionCount > 20) RegionCount = 20;
+            
+            InitializeMatrix(RegionCount);
+            Solution = null;
+            ErrorMessage = null;
+        }
+    }
+
+    private void ToggleAdjacency(int i, int j, ChangeEventArgs e)
+    {
+        var isChecked = (bool)(e.Value ?? false);
+        AdjacencyMatrix[i, j] = isChecked;
+        AdjacencyMatrix[j, i] = isChecked; // Maintain symmetry
+    }
+
+    private void LoadExample(ChangeEventArgs e)
+    {
+        var example = e.Value?.ToString();
+        if (string.IsNullOrEmpty(example)) return;
+
+        Solution = null;
+        ErrorMessage = null;
+
+        switch (example)
+        {
+            case "simple":
+                RegionCount = 4;
+                InitializeMatrix(4);
+                // Simple map: 0-1, 0-2, 0-3, 1-2, 2-3
+                AdjacencyMatrix[0, 1] = AdjacencyMatrix[1, 0] = true;
+                AdjacencyMatrix[0, 2] = AdjacencyMatrix[2, 0] = true;
+                AdjacencyMatrix[0, 3] = AdjacencyMatrix[3, 0] = true;
+                AdjacencyMatrix[1, 2] = AdjacencyMatrix[2, 1] = true;
+                AdjacencyMatrix[2, 3] = AdjacencyMatrix[3, 2] = true;
+                break;
+
+            case "australia":
+                RegionCount = 7;
+                InitializeMatrix(7);
+                // Australia map adjacencies
+                var australiaEdges = new[] {
+                    (0, 1), (0, 2), (0, 3), (0, 4), (0, 5),
+                    (1, 2), (1, 3),
+                    (2, 3), (2, 6),
+                    (3, 4), (3, 6),
+                    (4, 5), (4, 6),
+                    (5, 6)
+                };
+                foreach (var (i, j) in australiaEdges)
+                {
+                    AdjacencyMatrix[i, j] = AdjacencyMatrix[j, i] = true;
+                }
+                break;
+
+            case "k4":
+                RegionCount = 4;
+                InitializeMatrix(4);
+                // Complete graph K4 (all pairs connected)
+                for (int i = 0; i < 4; i++)
+                {
+                    for (int j = i + 1; j < 4; j++)
+                    {
+                        AdjacencyMatrix[i, j] = AdjacencyMatrix[j, i] = true;
+                    }
+                }
+                break;
+
+            case "k5":
+                RegionCount = 5;
+                InitializeMatrix(5);
+                // Complete graph K5 (not 4-colorable)
+                for (int i = 0; i < 5; i++)
+                {
+                    for (int j = i + 1; j < 5; j++)
+                    {
+                        AdjacencyMatrix[i, j] = AdjacencyMatrix[j, i] = true;
+                    }
+                }
+                break;
+        }
+    }
+
+    private void ClearGraph()
+    {
+        InitializeMatrix(RegionCount);
+        Solution = null;
+        ErrorMessage = null;
+    }
+
+    private async Task SolveAsync()
+    {
+        IsLoading = true;
+        ErrorMessage = null;
+        Solution = null;
+
+        try
+        {
+            // Convert bool[,] to int[][] (jagged array for JSON serialization)
+            int[][] matrixArray = new int[RegionCount][];
+            for (int i = 0; i < RegionCount; i++)
+            {
+                matrixArray[i] = new int[RegionCount];
+                for (int j = 0; j < RegionCount; j++)
+                {
+                    matrixArray[i][j] = AdjacencyMatrix[i, j] ? 1 : 0;
+                }
+            }
+
+            var request = new SolveRequestDto
+            {
+                RegionCount = RegionCount,
+                AdjacencyMatrix = matrixArray
+            };
+
+            var response = await Http.PostAsJsonAsync("api/mapcoloring/solve", request);
+
+            if (response.IsSuccessStatusCode)
+            {
+                Solution = await response.Content.ReadFromJsonAsync<SolveResponseDto>();
+
+                if (Solution is not null && !Solution.IsSolvable)
+                {
+                    ErrorMessage = Solution.ErrorMessage ?? "No se encontró una coloración válida para este grafo.";
+                }
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                ErrorMessage = "Error al procesar la solicitud. Verifica que el grafo sea válido.";
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private (double x, double y) GetNodePosition(int index, int total)
+    {
+        var centerX = 200.0;
+        var centerY = 200.0;
+        var radius = 140.0;
+        var angle = (2 * Math.PI * index / total) - (Math.PI / 2);
+        
+        return (
+            centerX + radius * Math.Cos(angle),
+            centerY + radius * Math.Sin(angle)
+        );
+    }
+
+    private string GetColorHex(int colorValue)
+    {
+        return colorValue switch
+        {
+            0 => "#FF6B6B", // Red
+            1 => "#4ECDC4", // Blue
+            2 => "#95E1D3", // Green
+            3 => "#FFE66D", // Yellow
+            _ => "#cccccc"
+        };
+    }
+
+    private string GetColorHexFromName(string colorName)
+    {
+        return colorName switch
+        {
+            "Red" => "#FF6B6B",
+            "Blue" => "#4ECDC4",
+            "Green" => "#95E1D3",
+            "Yellow" => "#FFE66D",
+            _ => "#cccccc"
+        };
+    }
+
+    private string GetColorName(int colorValue)
+    {
+        return colorValue switch
+        {
+            0 => "Rojo",
+            1 => "Azul",
+            2 => "Verde",
+            3 => "Amarillo",
+            _ => "Desconocido"
+        };
+    }
+
+    private string GetColorNameInSpanish(string colorName)
+    {
+        return colorName switch
+        {
+            "Red" => "Rojo",
+            "Blue" => "Azul",
+            "Green" => "Verde",
+            "Yellow" => "Amarillo",
+            _ => "Desconocido"
+        };
+    }
+
+    private string GetGraphSvg()
+    {
+        if (Solution?.ColorAssignment == null) return "";
+
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("<svg class='graph-svg' viewBox='0 0 400 400'>");
+
+        // Draw edges
+        for (int i = 0; i < RegionCount; i++)
+        {
+            for (int j = i + 1; j < RegionCount; j++)
+            {
+                if (AdjacencyMatrix[i, j])
+                {
+                    var pos1 = GetNodePosition(i, RegionCount);
+                    var pos2 = GetNodePosition(j, RegionCount);
+                    sb.AppendLine($"<line class='edge-line' x1='{pos1.x:F2}' y1='{pos1.y:F2}' x2='{pos2.x:F2}' y2='{pos2.y:F2}' />");
+                }
+            }
+        }
+
+        // Draw nodes
+        for (int i = 0; i < RegionCount; i++)
+        {
+            var pos = GetNodePosition(i, RegionCount);
+            var color = Solution.ColorAssignment.ContainsKey(i) 
+                ? GetColorHexFromName(Solution.ColorAssignment[i]) 
+                : "#cccccc";
+            
+            sb.AppendLine($"<circle class='region-node' cx='{pos.x:F2}' cy='{pos.y:F2}' r='30' fill='{color}' />");
+            sb.AppendLine($"<text class='region-label' x='{pos.x:F2}' y='{pos.y:F2}' dominant-baseline='middle'>{i}</text>");
+        }
+
+        sb.AppendLine("</svg>");
+        return sb.ToString();
+    }
+}

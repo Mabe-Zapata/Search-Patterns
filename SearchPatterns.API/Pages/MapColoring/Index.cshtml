@@ -1,0 +1,515 @@
+@page
+@model SearchPatterns.API.Pages.MapColoring.IndexModel
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Map Coloring Solver</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+
+        .input-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .input-group label {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .input-group input,
+        .input-group select {
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .input-group input:focus,
+        .input-group select:focus {
+            outline: none;
+            border-color: #11998e;
+        }
+
+        .btn {
+            padding: 14px 32px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(17, 153, 142, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+            margin-left: 10px;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .button-group {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .matrix-editor {
+            margin-top: 20px;
+            overflow-x: auto;
+        }
+
+        .matrix-table {
+            border-collapse: collapse;
+            margin: 0 auto;
+        }
+
+        .matrix-table th,
+        .matrix-table td {
+            padding: 8px;
+            text-align: center;
+            border: 1px solid #ddd;
+        }
+
+        .matrix-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+
+        .matrix-table input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .matrix-label {
+            text-align: center;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .results-section {
+            margin-top: 30px;
+        }
+
+        .solution-status {
+            text-align: center;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .solution-solvable {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .solution-unsolvable {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .color-legend {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .legend-color {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 2px solid #333;
+        }
+
+        .color-red { background: #FF0000; }
+        .color-blue { background: #0000FF; }
+        .color-green { background: #00FF00; }
+        .color-yellow { background: #FFFF00; }
+
+        .color-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .color-table th,
+        .color-table td {
+            padding: 12px;
+            text-align: center;
+            border: 1px solid #ddd;
+        }
+
+        .color-table th {
+            background: #f8f9fa;
+        }
+
+        .color-cell {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin: 0 auto;
+            border: 2px solid #333;
+        }
+
+        .metadata {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .metadata-item {
+            text-align: center;
+        }
+
+        .metadata-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #11998e;
+        }
+
+        .metadata-label {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 20px;
+            color: #666;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #11998e;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @@keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .graph-visualization {
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .graph-svg {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .region-circle {
+            stroke: #333;
+            stroke-width: 2;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .region-circle:hover {
+            transform: scale(1.1);
+        }
+
+        .region-label {
+            font-size: 14px;
+            font-weight: 600;
+            fill: white;
+            text-anchor: middle;
+            pointer-events: none;
+        }
+
+        .edge-line {
+            stroke: #333;
+            stroke-width: 2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🗺️ Map Coloring Solver</h1>
+
+        <div class="card">
+            <form method="post" asp-page-handler="Solve">
+                <div class="input-section">
+                    <div class="input-group">
+                        <label for="RegionCount">Número de Regiones</label>
+                        <input type="number" id="RegionCount" name="RegionCount" 
+                               value="@Model.RegionCount" min="1" max="100" required
+                               onchange="updateMatrixSize()">
+                    </div>
+                    <div class="input-group">
+                        <label for="ExampleGraph">Ejemplo de Grafo</label>
+                        <select id="ExampleGraph" name="ExampleGraph" onchange="loadExample()">
+                            <option value="">-- Seleccionar --</option>
+                            <option value="simple">Mapa Simple (4 regiones)</option>
+                            <option value="australia">Mapa de Australia (7 regiones)</option>
+                            <option value="k4">Grafo Completo K4</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="matrix-editor">
+                    <div class="matrix-label">Matriz de Adyacencia</div>
+                    <div id="matrixContainer">
+                        @Html.Raw(Model.GetMatrixHtml())
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button type="submit" class="btn btn-primary">Resolver</button>
+                    <button type="button" class="btn btn-secondary" onclick="clearForm()">Limpiar</button>
+                </div>
+            </form>
+        </div>
+
+        @if (Model.IsLoading)
+        {
+            <div class="card">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Resolviendo...</p>
+                </div>
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+        {
+            <div class="card">
+                <div class="error-message">@Model.ErrorMessage</div>
+            </div>
+        }
+
+        @if (Model.Solution != null)
+        {
+            <div class="card results-section">
+                <div class="solution-status @(Model.Solution.IsSolvable ? "solution-solvable" : "solution-unsolvable")">
+                    @(Model.Solution.IsSolvable ? "✅ Solución Encontrada" : "❌ Sin Solución")
+                </div>
+
+                @if (Model.Solution.Metadata != null)
+                {
+                    <div class="metadata">
+                        <div class="metadata-item">
+                            <div class="metadata-value">@Model.Solution.Metadata.BacktrackingSteps</div>
+                            <div class="metadata-label">Pasos de Backtracking</div>
+                        </div>
+                        <div class="metadata-item">
+                            <div class="metadata-value">@Model.Solution.Metadata.ExecutionTimeMs ms</div>
+                            <div class="metadata-label">Tiempo de Ejecución</div>
+                        </div>
+                    </div>
+                }
+
+                @if (Model.Solution.IsSolvable && Model.Solution.ColorAssignment != null)
+                {
+                    <div class="color-legend">
+                        <div class="legend-item">
+                            <div class="legend-color color-red"></div>
+                            <span>Red</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color color-blue"></div>
+                            <span>Blue</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color color-green"></div>
+                            <span>Green</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color color-yellow"></div>
+                            <span>Yellow</span>
+                        </div>
+                    </div>
+
+                    <table class="color-table">
+                        <thead>
+                            <tr>
+                                <th>Región</th>
+                                <th>Color</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var kvp in Model.Solution.ColorAssignment)
+                            {
+                                <tr>
+                                    <td>Región @kvp.Key</td>
+                                    <td>
+                                        <div class="color-cell color-@kvp.Value.ToLower()"></div>
+                                        @kvp.Value
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+
+                    <div class="graph-visualization">
+                        <h3>Visualización del Grafo</h3>
+                        @Html.Raw(Model.GetGraphSvg())
+                    </div>
+                }
+                else if (!Model.Solution.IsSolvable)
+                {
+                    <div class="error-message">
+                        @Model.Solution.ErrorMessage
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <script>
+        function updateMatrixSize() {
+            const regionCount = document.getElementById('RegionCount').value;
+            const form = document.querySelector('form');
+            const formData = new FormData(form);
+            formData.set('Handler', 'UpdateMatrix');
+            
+            fetch(form.action, {
+                method: 'POST',
+                body: formData
+            }).then(response => response.text()).then(html => {
+                document.documentElement.innerHTML = html;
+            });
+        }
+
+        function loadExample() {
+            const example = document.getElementById('ExampleGraph').value;
+            if (!example) return;
+
+            const examples = {
+                'simple': { regions: 4, matrix: [[0,1,1,1],[1,0,1,0],[1,1,0,1],[1,0,1,0]] },
+                'australia': { 
+                    regions: 7, 
+                    matrix: [
+                        [0,1,1,1,1,1,0],
+                        [1,0,1,1,0,0,0],
+                        [1,1,0,1,0,0,1],
+                        [1,1,1,0,1,0,1],
+                        [1,0,0,1,0,1,1],
+                        [1,0,0,0,1,0,1],
+                        [0,0,1,1,1,1,0]
+                    ]
+                },
+                'k4': { 
+                    regions: 4, 
+                    matrix: [
+                        [0,1,1,1],
+                        [1,0,1,1],
+                        [1,1,0,1],
+                        [1,1,1,0]
+                    ]
+                }
+            };
+
+            const selected = examples[example];
+            document.getElementById('RegionCount').value = selected.regions;
+            
+            // Rebuild matrix with new values
+            setTimeout(() => {
+                for (let i = 0; i < selected.regions; i++) {
+                    for (let j = 0; j < selected.regions; j++) {
+                        const checkbox = document.querySelector(`input[name="AdjacencyMatrix[${i}][${j}]"]`);
+                        if (checkbox) {
+                            checkbox.checked = selected.matrix[i][j] === 1;
+                        }
+                    }
+                }
+            }, 100);
+        }
+
+        function clearForm() {
+            document.getElementById('RegionCount').value = 4;
+            document.getElementById('ExampleGraph').value = '';
+            const checkboxes = document.querySelectorAll('.matrix-table input[type="checkbox"]');
+            checkboxes.forEach(cb => cb.checked = false);
+        }
+    </script>
+</body>
+</html>
