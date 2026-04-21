@@ -11,6 +11,7 @@ public interface IBacktrackingSolver
     /// Solves the map coloring problem using backtracking algorithm.
     /// </summary>
     /// <param name="graph">The graph representing the map.</param>
+    /// <param name="captureSteps">If true, captures step-by-step execution trace.</param>
     /// <returns>A SolutionResult containing the color assignment or failure information.</returns>
-    SolutionResult Solve(Graph graph);
+    SolutionResult Solve(Graph graph, bool captureSteps = false);
 }

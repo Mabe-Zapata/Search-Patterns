@@ -90,14 +90,17 @@
 }
 
 .edge-line {
-    stroke: #cbd5e1;
-    stroke-width: 2;
+    stroke: #0f172a;
+    stroke-width: 8;
+    stroke-linecap: round;
+    opacity: 1;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
 }
 
 .region-node {
     stroke: #1a1a2e;
     stroke-width: 3;
-    transition: transform .2s ease;
+    transition: fill 0.3s ease, stroke 0.3s ease, transform .2s ease;
     cursor: pointer;
 }
 
@@ -433,6 +436,191 @@
     border: 2px solid #1a1a2e;
 }
 
+/* ── Navigation Controls ───────────────────────────────────── */
+.navigation-controls {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    max-width: 600px;
+    margin-top: 16px;
+}
+
+.navigation-controls .btn {
+    flex: 1;
+    min-width: 100px;
+}
+
+.navigation-controls .btn:disabled {
+    opacity: .4;
+    cursor: not-allowed;
+}
+
+/* ── Speed Selector ────────────────────────────────────────── */
+.speed-selector {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    max-width: 300px;
+    margin-top: 16px;
+}
+
+.speed-selector label {
+    font-size: .75rem;
+    font-weight: 700;
+    color: #495057;
+    letter-spacing: .05em;
+    text-align: center;
+}
+
+.speed-selector .form-control {
+    text-align: center;
+    font-weight: 600;
+}
+
+/* ── Step Visualization Badges ─────────────────────────────── */
+.badge-success {
+    background: #4ECDC4;
+    color: #fff;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: .7rem;
+    font-weight: 700;
+    display: inline-block;
+}
+
+.badge-conflict {
+    background: #FF6B6B;
+    color: #fff;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: .7rem;
+    font-weight: 700;
+    display: inline-block;
+}
+
+.badge-backtrack {
+    background: #FFE66D;
+    color: #333;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: .7rem;
+    font-weight: 700;
+    display: inline-block;
+}
+
+/* ── Graph Node Animations ─────────────────────────────────── */
+.region-node {
+    stroke: #1a1a2e;
+    stroke-width: 3;
+    transition: fill 0.3s ease, stroke 0.3s ease, transform .2s ease;
+    cursor: pointer;
+}
+
+.current-region {
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        stroke-opacity: 1;
+    }
+    50% {
+        stroke-opacity: 0.5;
+    }
+}
+
+/* ── Trace Section (Event Log) ─────────────────────────────── */
+.trace-section {
+    background: #fff;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 4px 16px rgba(0,0,0,.05);
+    margin-top: 24px;
+}
+
+.trace-header {
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.trace-header h2 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin: 0;
+}
+
+.trace-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 500px;
+    overflow-y: auto;
+    padding-right: 8px;
+}
+
+.trace-item {
+    display: flex;
+    gap: 16px;
+    padding: 14px;
+    border-radius: 8px;
+    background: #f8f9fa;
+    transition: all .2s;
+    border-left: 3px solid transparent;
+}
+
+.trace-item.active {
+    background: #eef2ff;
+    border-left-color: #4361ee;
+    box-shadow: 0 2px 8px rgba(67, 97, 238, .15);
+}
+
+.step-number {
+    font-size: .75rem;
+    font-weight: 700;
+    color: #6b7280;
+    min-width: 40px;
+    text-align: right;
+}
+
+.step-details {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.step-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    color: #1a1a2e;
+    font-size: .9rem;
+}
+
+.step-description {
+    font-size: .8rem;
+    color: #6b7280;
+}
+
+.conflict-info {
+    color: #FF6B6B;
+    font-style: italic;
+    font-weight: 600;
+}
+
+.step-timestamp {
+    font-size: .7rem;
+    color: #9ca3af;
+    font-weight: 600;
+    align-self: flex-start;
+}
+
 /* ── Responsive ────────────────────────────────────────────── */
 @media (max-width: 768px) {
     .coloring-layout {
@@ -445,5 +633,28 @@
 
     .visualization-card {
         min-height: 400px;
+    }
+
+    .navigation-controls {
+        flex-wrap: wrap;
+    }
+
+    .navigation-controls .btn {
+        min-width: 80px;
+        font-size: .8rem;
+        padding: 9px 16px;
+    }
+
+    .trace-list {
+        max-height: 400px;
+    }
+
+    .trace-item {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .step-number {
+        text-align: left;
     }
 }

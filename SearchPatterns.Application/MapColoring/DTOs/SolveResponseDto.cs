@@ -34,6 +34,11 @@ public record SolveResponseDto
     public string? ErrorMessage { get; init; }
 
     /// <summary>
+    /// Optional step-by-step execution trace. Null when captureSteps was false in the request.
+    /// </summary>
+    public List<BacktrackingStepDto>? Steps { get; init; }
+
+    /// <summary>
     /// Creates a SolveResponseDto from a SolutionResult entity.
     /// </summary>
     public static SolveResponseDto FromEntity(SolutionResult result)
@@ -61,6 +66,13 @@ public record SolveResponseDto
             }
         }
 
+        // Map steps if available
+        List<BacktrackingStepDto>? steps = null;
+        if (result.Steps != null)
+        {
+            steps = result.Steps.Select(BacktrackingStepDto.FromEntity).ToList();
+        }
+
         return new SolveResponseDto
         {
             IsSolvable = result.IsSolvable,
@@ -71,7 +83,8 @@ public record SolveResponseDto
                 BacktrackingSteps = result.BacktrackingSteps,
                 ExecutionTimeMs = result.ExecutionTimeMs
             },
-            ErrorMessage = null
+            ErrorMessage = null,
+            Steps = steps
         };
     }
 
@@ -95,6 +108,13 @@ public record SolveResponseDto
     /// </summary>
     public static SolveResponseDto Unsolvable(SolutionResult result, string errorMessage)
     {
+        // Map steps if available
+        List<BacktrackingStepDto>? steps = null;
+        if (result.Steps != null)
+        {
+            steps = result.Steps.Select(BacktrackingStepDto.FromEntity).ToList();
+        }
+
         return new SolveResponseDto
         {
             IsSolvable = false,
@@ -105,7 +125,8 @@ public record SolveResponseDto
                 BacktrackingSteps = result.BacktrackingSteps,
                 ExecutionTimeMs = result.ExecutionTimeMs
             },
-            ErrorMessage = errorMessage
+            ErrorMessage = errorMessage,
+            Steps = steps
         };
     }
 }

@@ -21,4 +21,10 @@ public record SolveRequestDto
     /// 2D array where matrix[i][j] = 1 means regions i and j are adjacent, 0 otherwise.
     /// </summary>
     public int[][]? AdjacencyMatrix { get; init; }
+
+    /// <summary>
+    /// If true, the solver will capture step-by-step execution trace for visualization.
+    /// Defaults to false for backward compatibility.
+    /// </summary>
+    public bool CaptureSteps { get; init; } = false;
 }

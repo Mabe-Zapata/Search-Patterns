@@ -1,7 +1,9 @@
 @page "/mapcoloring"
 @using SearchPatterns.Application.MapColoring.DTOs
 @using Microsoft.AspNetCore.Components
+@using Microsoft.JSInterop
 @inject HttpClient Http
+@inject IJSRuntime JSRuntime
 
 <PageTitle>Coloreo de Mapas | Algoritmos de Búsqueda</PageTitle>
 
@@ -51,6 +53,58 @@
                     <span>Amarillo</span>
                 </div>
             </div>
+
+            @if (Solution.Steps is not null && Solution.Steps.Count > 0)
+            {
+                <div class="navigation-controls">
+                    <button class="btn btn-outline" 
+                            @onclick="RestartVisualization"
+                            aria-label="Reiniciar visualización">
+                        ⏮ Reiniciar
+                    </button>
+                    <button class="btn btn-outline" 
+                            @onclick="PrevStep" 
+                            disabled="@(CurrentStepIndex <= 0)"
+                            aria-label="Paso anterior">
+                        ◀ Atrás
+                    </button>
+                    <button class="btn btn-primary" 
+                            @onclick="ToggleAutoPlay"
+                            aria-label="@(IsAutoPlaying ? "Detener reproducción" : "Reproducir automáticamente")">
+                        @(IsAutoPlaying ? "⏹ Detener" : "▶ Reproducir")
+                    </button>
+                    <button class="btn btn-outline" 
+                            @onclick="NextStep" 
+                            disabled="@(CurrentStepIndex >= Solution.Steps.Count - 1)"
+                            aria-label="Siguiente paso">
+                        Siguiente ▶
+                    </button>
+                </div>
+
+                <div class="speed-selector">
+                    <label>VELOCIDAD DE REPRODUCCIÓN</label>
+                    <select class="form-control" @onchange="OnSpeedChanged">
+                        <option value="1200">Lento</option>
+                        <option value="800" selected>Normal</option>
+                        <option value="400">Rápido</option>
+                    </select>
+                </div>
+
+                <div class="stats-card" aria-live="polite">
+                    <div class="stat">
+                        <span class="stat-value">Paso @(CurrentStepIndex + 1) de @Solution.Steps.Count</span>
+                        <span class="stat-label">Progreso</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-value">@TotalBacktracks</span>
+                        <span class="stat-label">Retrocesos</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-value">@(Solution.Metadata?.ExecutionTimeMs ?? 0) ms</span>
+                        <span class="stat-label">Tiempo Total</span>
+                    </div>
+                </div>
+            }
         }
         else
         {
@@ -161,6 +215,77 @@
     </div>
 </div>
 
+@if (Solution is not null && Solution.Steps is not null && Solution.Steps.Count > 0)
+{
+    <section class="trace-section">
+        <div class="trace-header">
+            <h2>Traza de Ejecución del Backtracking</h2>
+        </div>
+        <div class="trace-list">
+            @for (int i = 0; i <= CurrentStepIndex; i++)
+            {
+                var step = Solution.Steps[i];
+                var isCurrentStep = i == CurrentStepIndex;
+                
+                @if (isCurrentStep)
+                {
+                    <div class="trace-item active" 
+                         @ref="_currentStepElement"
+                         aria-current="step">
+                        <div class="step-number">@step.StepNumber.ToString("D3")</div>
+                        <div class="step-details">
+                            <div class="step-title">
+                                @GetStepDescription(step)
+                                <span class="step-badge @GetStepBadgeClass(step)">
+                                    @GetStepBadgeText(step)">
+                                </span>
+                            </div>
+                            <div class="step-description">
+                            Región @step.RegionId → @GetColorNameInSpanish(step.ColorName)
+                            @if (!step.IsSafe && step.ConflictingRegion.HasValue)
+                            {
+                                <span class="conflict-info">
+                                    (Conflicto con región @step.ConflictingRegion)
+                                </span>
+                            }
+                        </div>
+                    </div>
+                    <div class="step-timestamp">
+                        +@step.TimestampOffsetMs ms
+                    </div>
+                </div>
+                }
+                else
+                {
+                    <div class="trace-item">
+                        <div class="step-number">@step.StepNumber.ToString("D3")</div>
+                        <div class="step-details">
+                            <div class="step-title">
+                                @GetStepDescription(step)
+                                <span class="step-badge @GetStepBadgeClass(step)">
+                                    @GetStepBadgeText(step)
+                                </span>
+                            </div>
+                            <div class="step-description">
+                            Región @step.RegionId → @GetColorNameInSpanish(step.ColorName)
+                            @if (!step.IsSafe && step.ConflictingRegion.HasValue)
+                            {
+                                <span class="conflict-info">
+                                    (Conflicto con región @step.ConflictingRegion)
+                                </span>
+                            }
+                        </div>
+                    </div>
+                    <div class="step-timestamp">
+                        +@step.TimestampOffsetMs ms
+                    </div>
+                </div>
+                }
+            }
+        </div>
+    </section>
+}
+
 @if (Solution is not null && Solution.IsSolvable && Solution.ColorAssignment is not null)
 {
     <section class="results-section">
@@ -198,6 +323,14 @@
     private SolveResponseDto? Solution { get; set; }
     private bool IsLoading { get; set; }
     private string? ErrorMessage { get; set; }
+
+    // Step visualization state
+    private int CurrentStepIndex { get; set; } = -1;
+    private bool IsAutoPlaying { get; set; } = false;
+    private int PlaybackSpeed { get; set; } = 800;
+    private int TotalBacktracks { get; set; } = 0;
+    private CancellationTokenSource? _autoPlayCts;
+    private ElementReference _currentStepElement;
 
     protected override void OnInitialized()
     {
@@ -326,7 +459,8 @@
             var request = new SolveRequestDto
             {
                 RegionCount = RegionCount,
-                AdjacencyMatrix = matrixArray
+                AdjacencyMatrix = matrixArray,
+                CaptureSteps = true
             };
 
             var response = await Http.PostAsJsonAsync("api/mapcoloring/solve", request);
@@ -335,9 +469,19 @@
             {
                 Solution = await response.Content.ReadFromJsonAsync<SolveResponseDto>();
 
-                if (Solution is not null && !Solution.IsSolvable)
+                if (Solution is not null)
                 {
-                    ErrorMessage = Solution.ErrorMessage ?? "No se encontró una coloración válida para este grafo.";
+                    // Initialize step visualization state
+                    if (Solution.Steps is not null && Solution.Steps.Count > 0)
+                    {
+                        CurrentStepIndex = 0;
+                        TotalBacktracks = Solution.Steps.Count(s => s.ActionType == "Backtrack");
+                    }
+
+                    if (!Solution.IsSolvable)
+                    {
+                        ErrorMessage = Solution.ErrorMessage ?? "No se encontró una coloración válida para este grafo.";
+                    }
                 }
             }
             else
@@ -424,6 +568,21 @@
         var sb = new System.Text.StringBuilder();
         sb.AppendLine("<svg class='graph-svg' viewBox='0 0 400 400'>");
 
+        // Determine which assignment to use: current step or final solution
+        Dictionary<int, string>? currentAssignment = null;
+        BacktrackingStepDto? currentStep = null;
+        
+        if (Solution.Steps is not null && CurrentStepIndex >= 0 && CurrentStepIndex < Solution.Steps.Count)
+        {
+            currentStep = Solution.Steps[CurrentStepIndex];
+            currentAssignment = currentStep.CurrentAssignment;
+        }
+        else
+        {
+            // Fallback to final solution
+            currentAssignment = Solution.ColorAssignment;
+        }
+
         // Draw edges
         for (int i = 0; i < RegionCount; i++)
         {
@@ -442,15 +601,192 @@
         for (int i = 0; i < RegionCount; i++)
         {
             var pos = GetNodePosition(i, RegionCount);
-            var color = Solution.ColorAssignment.ContainsKey(i) 
-                ? GetColorHexFromName(Solution.ColorAssignment[i]) 
+            var color = currentAssignment.ContainsKey(i) 
+                ? GetColorHexFromName(currentAssignment[i]) 
                 : "#cccccc";
             
-            sb.AppendLine($"<circle class='region-node' cx='{pos.x:F2}' cy='{pos.y:F2}' r='30' fill='{color}' />");
+            // Determine if this is the current region being processed
+            var isCurrentRegion = currentStep is not null 
+                && currentStep.ActionType == "TryAssign" 
+                && currentStep.RegionId == i;
+            
+            var nodeClass = isCurrentRegion ? "region-node current-region" : "region-node";
+            var strokeStyle = isCurrentRegion ? "stroke: #FFD700; stroke-width: 4;" : "";
+            
+            sb.AppendLine($"<circle class='{nodeClass}' cx='{pos.x:F2}' cy='{pos.y:F2}' r='28' fill='{color}' style='{strokeStyle}' />");
             sb.AppendLine($"<text class='region-label' x='{pos.x:F2}' y='{pos.y:F2}' dominant-baseline='middle'>{i}</text>");
         }
 
         sb.AppendLine("</svg>");
         return sb.ToString();
+    }
+
+    // Step navigation methods
+
+    private async Task NextStep()
+    {
+        if (Solution?.Steps == null) return;
+        
+        if (CurrentStepIndex < Solution.Steps.Count - 1)
+        {
+            CurrentStepIndex++;
+            StateHasChanged();
+            // Only scroll when manually clicking Next (not during autoplay)
+            if (!IsAutoPlaying)
+            {
+                await ScrollToCurrentStep();
+            }
+        }
+    }
+
+    private async Task PrevStep()
+    {
+        if (CurrentStepIndex > 0)
+        {
+            CurrentStepIndex--;
+            
+            // Stop autoplay if active
+            if (IsAutoPlaying)
+            {
+                IsAutoPlaying = false;
+                _autoPlayCts?.Cancel();
+                _autoPlayCts?.Dispose();
+                _autoPlayCts = null;
+            }
+            
+            StateHasChanged();
+            await ScrollToCurrentStep();
+        }
+    }
+
+    private async Task RestartVisualization()
+    {
+        CurrentStepIndex = 0;
+        
+        // Stop autoplay if active
+        if (IsAutoPlaying)
+        {
+            IsAutoPlaying = false;
+            _autoPlayCts?.Cancel();
+            _autoPlayCts?.Dispose();
+            _autoPlayCts = null;
+        }
+        
+        StateHasChanged();
+        await ScrollToCurrentStep();
+    }
+
+    private async Task ToggleAutoPlay()
+    {
+        if (Solution?.Steps == null) return;
+
+        if (IsAutoPlaying)
+        {
+            // Stop autoplay
+            IsAutoPlaying = false;
+            _autoPlayCts?.Cancel();
+            _autoPlayCts?.Dispose();
+            _autoPlayCts = null;
+        }
+        else
+        {
+            // Start autoplay
+            IsAutoPlaying = true;
+            _autoPlayCts = new CancellationTokenSource();
+            
+            try
+            {
+                while (IsAutoPlaying && CurrentStepIndex < Solution.Steps.Count - 1)
+                {
+                    await Task.Delay(PlaybackSpeed, _autoPlayCts.Token);
+                    
+                    if (_autoPlayCts.Token.IsCancellationRequested)
+                        break;
+                    
+                    CurrentStepIndex++;
+                    StateHasChanged();
+                    // Removed auto-scroll during playback to keep graph visible
+                }
+                
+                // Stop automatically when reaching final step
+                if (CurrentStepIndex >= Solution.Steps.Count - 1)
+                {
+                    IsAutoPlaying = false;
+                    _autoPlayCts?.Dispose();
+                    _autoPlayCts = null;
+                }
+            }
+            catch (TaskCanceledException)
+            {
+                // Expected when cancellation is requested
+            }
+        }
+    }
+
+    private void SetPlaybackSpeed(int speed)
+    {
+        PlaybackSpeed = speed;
+        // If autoplay is active, new speed applies to next iteration
+    }
+
+    private void OnSpeedChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int speed))
+        {
+            SetPlaybackSpeed(speed);
+        }
+    }
+
+    // Step description and badge helper methods
+
+    private string GetStepDescription(BacktrackingStepDto step)
+    {
+        return step.ActionType switch
+        {
+            "TryAssign" when step.IsSafe => "Asignar Color",
+            "TryAssign" when !step.IsSafe => "Conflicto Detectado",
+            "Backtrack" => "Retroceder",
+            "Success" => "Solución Encontrada",
+            "Failure" => "Sin Solución",
+            _ => "Acción Desconocida"
+        };
+    }
+
+    private string GetStepBadgeClass(BacktrackingStepDto step)
+    {
+        return step.ActionType switch
+        {
+            "TryAssign" when step.IsSafe => "badge-success",
+            "TryAssign" when !step.IsSafe => "badge-conflict",
+            "Backtrack" => "badge-backtrack",
+            "Success" => "badge-success",
+            "Failure" => "badge-failure",
+            _ => "badge-default"
+        };
+    }
+
+    private string GetStepBadgeText(BacktrackingStepDto step)
+    {
+        return step.ActionType switch
+        {
+            "TryAssign" when step.IsSafe => "✓",
+            "TryAssign" when !step.IsSafe => "✗",
+            "Backtrack" => "↩",
+            "Success" => "✓✓",
+            "Failure" => "✗✗",
+            _ => "?"
+        };
+    }
+
+    private async Task ScrollToCurrentStep()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("scrollToElement", _currentStepElement);
+        }
+        catch
+        {
+            // Ignore JS interop errors (e.g., during prerendering)
+        }
     }
 }

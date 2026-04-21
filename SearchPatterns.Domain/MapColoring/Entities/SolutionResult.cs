@@ -8,7 +8,8 @@ public record SolutionResult(
     ColorAssignment ColorAssignment,
     int TotalRegions,
     int BacktrackingSteps,
-    long ExecutionTimeMs
+    long ExecutionTimeMs,
+    IReadOnlyList<BacktrackingStep>? Steps = null
 )
 {
     /// <summary>
@@ -18,14 +19,16 @@ public record SolutionResult(
         ColorAssignment assignment, 
         int totalRegions, 
         int backtrackingSteps, 
-        long executionTimeMs)
+        long executionTimeMs,
+        IReadOnlyList<BacktrackingStep>? steps = null)
     {
         return new SolutionResult(
             true, 
             assignment, 
             totalRegions, 
             backtrackingSteps, 
-            executionTimeMs
+            executionTimeMs,
+            steps
         );
     }
 
@@ -35,14 +38,16 @@ public record SolutionResult(
     public static SolutionResult Unsolvable(
         int totalRegions, 
         int backtrackingSteps, 
-        long executionTimeMs)
+        long executionTimeMs,
+        IReadOnlyList<BacktrackingStep>? steps = null)
     {
         return new SolutionResult(
             false, 
             new ColorAssignment(), 
             totalRegions, 
             backtrackingSteps, 
-            executionTimeMs
+            executionTimeMs,
+            steps
         );
     }
 
@@ -52,14 +57,16 @@ public record SolutionResult(
     public static SolutionResult Timeout(
         int totalRegions, 
         int backtrackingSteps, 
-        long executionTimeMs)
+        long executionTimeMs,
+        IReadOnlyList<BacktrackingStep>? steps = null)
     {
         return new SolutionResult(
             false, 
             new ColorAssignment(), 
             totalRegions, 
             backtrackingSteps, 
-            executionTimeMs
+            executionTimeMs,
+            steps
         );
     }
 }

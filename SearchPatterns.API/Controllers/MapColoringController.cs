@@ -89,7 +89,7 @@ public class MapColoringController : ControllerBase
             };
 
             // Solve the problem
-            var solution = _solver.Solve(graph);
+            var solution = _solver.Solve(graph, request.CaptureSteps);
 
             // Map the solution to response DTO
             SolveResponseDto response;
