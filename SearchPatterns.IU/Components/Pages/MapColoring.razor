@@ -26,35 +26,57 @@
     
     <div class="visualization-card">
         <span class="badge @(Solution is not null && Solution.IsSolvable ? "active" : "inactive")">
-            @(Solution is not null && Solution.IsSolvable ? "SOLUCIÓN ENCONTRADA" : "SIN SOLUCIÓN")
+            @(Solution is not null && Solution.IsSolvable ? "SOLUCIÓN ENCONTRADA" : "SIN VISUALIZACIÓN")
         </span>
 
-        @if (Solution is not null && Solution.IsSolvable && Solution.ColorAssignment is not null)
+        @if (ShouldRenderGraph())
         {
-            <div class="graph-container">
-                @((MarkupString)GetGraphSvg())
+            <div class="graph-stage">
+                <div class="graph-stage-pattern"></div>
+
+                <div class="graph-status-stack">
+                    @if (ShouldShowConflictIndicator())
+                    {
+                        <div class="graph-status-chip danger">
+                            <span class="status-dot"></span>
+                            <span>Conflicto detectado</span>
+                        </div>
+                    }
+
+                    @if (GetCurrentEvaluatedRegion() is int regionId)
+                    {
+                        <div class="graph-status-chip info">
+                            <span class="status-dot"></span>
+                            <span>Evaluando nodo @regionId</span>
+                        </div>
+                    }
+                </div>
+
+                <div class="graph-container">
+                    @((MarkupString)GetGraphSvg())
+                </div>
             </div>
 
             <div class="color-legend">
                 <div class="legend-item">
-                    <div class="legend-color" style="background: #FF6B6B;"></div>
+                    <div class="legend-color" style="background: #c81d25;"></div>
                     <span>Rojo</span>
                 </div>
                 <div class="legend-item">
-                    <div class="legend-color" style="background: #4ECDC4;"></div>
+                    <div class="legend-color" style="background: #26b6d2;"></div>
                     <span>Azul</span>
                 </div>
                 <div class="legend-item">
-                    <div class="legend-color" style="background: #95E1D3;"></div>
+                    <div class="legend-color" style="background: #22c55e;"></div>
                     <span>Verde</span>
                 </div>
                 <div class="legend-item">
-                    <div class="legend-color" style="background: #FFE66D;"></div>
+                    <div class="legend-color" style="background: #facc15;"></div>
                     <span>Amarillo</span>
                 </div>
             </div>
 
-            @if (Solution.Steps is not null && Solution.Steps.Count > 0)
+            @if (Solution?.Steps is not null && Solution.Steps.Count > 0)
             {
                 <div class="navigation-controls">
                     <button class="btn btn-outline" 
@@ -64,7 +86,7 @@
                     </button>
                     <button class="btn btn-outline" 
                             @onclick="PrevStep" 
-                            disabled="@(CurrentStepIndex <= 0)"
+                            disabled="@(CurrentStepIndex < 0)"
                             aria-label="Paso anterior">
                         ◀ Atrás
                     </button>
@@ -90,9 +112,9 @@
                     </select>
                 </div>
 
-                <div class="stats-card" aria-live="polite">
+                <div class="stats-card visualization-stats" aria-live="polite">
                     <div class="stat">
-                        <span class="stat-value">Paso @(CurrentStepIndex + 1) de @Solution.Steps.Count</span>
+                        <span class="stat-value">Paso @GetDisplayedStepNumber() de @Solution.Steps.Count</span>
                         <span class="stat-label">Progreso</span>
                     </div>
                     <div class="stat">
@@ -110,7 +132,16 @@
         {
             <div class="empty-state">
                 <div class="empty-icon">🗺️</div>
-                <p>Configura un grafo y presiona "Resolver" para ver la coloración</p>
+                <p>
+                    @if (HasSelectedExample())
+                    {
+                        @:Ya seleccionaste un ejemplo. Ahora presioná <strong>"Resolver"</strong> para generar el grafo y ver la ejecución.
+                    }
+                    else
+                    {
+                        @:Seleccioná un ejemplo de grafo y después presioná <strong>"Resolver"</strong> para generar la visualización.
+                    }
+                </p>
             </div>
         }
     </div>
@@ -130,8 +161,9 @@
 
             <div class="form-group">
                 <label>EJEMPLO DE GRAFO</label>
-                <select class="form-control" @onchange="LoadExample">
+                <select class="form-control" value="@SelectedExample" @onchange="LoadExample">
                     <option value="">-- Seleccionar --</option>
+                    <option value="observatory">Grafo Visual del Observatorio</option>
                     <option value="simple">Mapa Simple (4 regiones)</option>
                     <option value="australia">Mapa de Australia (7 regiones)</option>
                     <option value="k4">Grafo Completo K4</option>
@@ -323,6 +355,7 @@
     private SolveResponseDto? Solution { get; set; }
     private bool IsLoading { get; set; }
     private string? ErrorMessage { get; set; }
+    private string SelectedExample { get; set; } = string.Empty;
 
     // Step visualization state
     private int CurrentStepIndex { get; set; } = -1;
@@ -334,7 +367,7 @@
 
     protected override void OnInitialized()
     {
-        InitializeMatrix(4);
+        InitializeMatrix(RegionCount);
     }
 
     private void InitializeMatrix(int size)
@@ -349,10 +382,10 @@
             RegionCount = newCount;
             if (RegionCount < 1) RegionCount = 1;
             if (RegionCount > 20) RegionCount = 20;
+            SelectedExample = string.Empty;
             
             InitializeMatrix(RegionCount);
-            Solution = null;
-            ErrorMessage = null;
+            ResetVisualizationState();
         }
     }
 
@@ -368,11 +401,16 @@
         var example = e.Value?.ToString();
         if (string.IsNullOrEmpty(example)) return;
 
-        Solution = null;
-        ErrorMessage = null;
+        SelectedExample = example;
+
+        ResetVisualizationState();
 
         switch (example)
         {
+            case "observatory":
+                LoadObservatoryGraph();
+                break;
+
             case "simple":
                 RegionCount = 4;
                 InitializeMatrix(4);
@@ -430,18 +468,36 @@
         }
     }
 
+    private void LoadObservatoryGraph()
+    {
+        SelectedExample = "observatory";
+        RegionCount = 7;
+        InitializeMatrix(7);
+
+        var observatoryEdges = new[]
+        {
+            (0, 1), (0, 2), (0, 3),
+            (1, 3), (2, 3),
+            (1, 4), (2, 5),
+            (4, 5)
+        };
+
+        foreach (var (i, j) in observatoryEdges)
+        {
+            AdjacencyMatrix[i, j] = AdjacencyMatrix[j, i] = true;
+        }
+    }
+
     private void ClearGraph()
     {
         InitializeMatrix(RegionCount);
-        Solution = null;
-        ErrorMessage = null;
+        ResetVisualizationState();
     }
 
     private async Task SolveAsync()
     {
         IsLoading = true;
-        ErrorMessage = null;
-        Solution = null;
+        ResetVisualizationState();
 
         try
         {
@@ -474,7 +530,7 @@
                     // Initialize step visualization state
                     if (Solution.Steps is not null && Solution.Steps.Count > 0)
                     {
-                        CurrentStepIndex = 0;
+                        CurrentStepIndex = -1;
                         TotalBacktracks = Solution.Steps.Count(s => s.ActionType == "Backtrack");
                     }
 
@@ -502,6 +558,21 @@
 
     private (double x, double y) GetNodePosition(int index, int total)
     {
+        if (UsesObservatoryLayout(total))
+        {
+            return index switch
+            {
+                0 => (400, 100),
+                1 => (200, 250),
+                2 => (600, 250),
+                3 => (400, 300),
+                4 => (300, 450),
+                5 => (500, 450),
+                6 => (100, 100),
+                _ => (400, 300)
+            };
+        }
+
         var centerX = 200.0;
         var centerY = 200.0;
         var radius = 140.0;
@@ -517,10 +588,10 @@
     {
         return colorValue switch
         {
-            0 => "#FF6B6B", // Red
-            1 => "#4ECDC4", // Blue
-            2 => "#95E1D3", // Green
-            3 => "#FFE66D", // Yellow
+            0 => "#c81d25", // Red
+            1 => "#26b6d2", // Blue
+            2 => "#22c55e", // Green
+            3 => "#facc15", // Yellow
             _ => "#cccccc"
         };
     }
@@ -529,10 +600,10 @@
     {
         return colorName switch
         {
-            "Red" => "#FF6B6B",
-            "Blue" => "#4ECDC4",
-            "Green" => "#95E1D3",
-            "Yellow" => "#FFE66D",
+            "Red" => "#c81d25",
+            "Blue" => "#26b6d2",
+            "Green" => "#22c55e",
+            "Yellow" => "#facc15",
             _ => "#cccccc"
         };
     }
@@ -563,23 +634,21 @@
 
     private string GetGraphSvg()
     {
-        if (Solution?.ColorAssignment == null) return "";
-
         var sb = new System.Text.StringBuilder();
-        sb.AppendLine("<svg class='graph-svg' viewBox='0 0 400 400'>");
+        var viewBox = UsesObservatoryLayout(RegionCount) ? "0 0 800 600" : "0 0 400 400";
+        sb.AppendLine($"<svg class='graph-svg' viewBox='{viewBox}'>");
 
         // Determine which assignment to use: current step or final solution
-        Dictionary<int, string>? currentAssignment = null;
+        Dictionary<int, string> currentAssignment = new();
         BacktrackingStepDto? currentStep = null;
         
-        if (Solution.Steps is not null && CurrentStepIndex >= 0 && CurrentStepIndex < Solution.Steps.Count)
+        if (Solution?.Steps is not null && CurrentStepIndex >= 0 && CurrentStepIndex < Solution.Steps.Count)
         {
             currentStep = Solution.Steps[CurrentStepIndex];
-            currentAssignment = currentStep.CurrentAssignment;
+            currentAssignment = currentStep.CurrentAssignment ?? new Dictionary<int, string>();
         }
-        else
+        else if (Solution?.ColorAssignment is not null && (Solution.Steps is null || Solution.Steps.Count == 0))
         {
-            // Fallback to final solution
             currentAssignment = Solution.ColorAssignment;
         }
 
@@ -592,7 +661,7 @@
                 {
                     var pos1 = GetNodePosition(i, RegionCount);
                     var pos2 = GetNodePosition(j, RegionCount);
-                    sb.AppendLine($"<line class='edge-line' x1='{pos1.x:F2}' y1='{pos1.y:F2}' x2='{pos2.x:F2}' y2='{pos2.y:F2}' />");
+                    sb.AppendLine($"<line x1='{pos1.x:F2}' y1='{pos1.y:F2}' x2='{pos2.x:F2}' y2='{pos2.y:F2}' style='stroke: #cbd5e1; stroke-width: 3.25; stroke-opacity: 1; stroke-linecap: round;' />");
                 }
             }
         }
@@ -601,24 +670,164 @@
         for (int i = 0; i < RegionCount; i++)
         {
             var pos = GetNodePosition(i, RegionCount);
-            var color = currentAssignment.ContainsKey(i) 
-                ? GetColorHexFromName(currentAssignment[i]) 
-                : "#cccccc";
+            var color = GetNodeFill(i, currentAssignment, currentStep);
+            var textColor = GetNodeTextColor(i, currentAssignment, currentStep);
+            var nodeStyle = GetNodeStyle(i, currentAssignment, currentStep);
+            var nodeClass = GetNodeClass(i, currentAssignment, currentStep);
             
-            // Determine if this is the current region being processed
-            var isCurrentRegion = currentStep is not null 
-                && currentStep.ActionType == "TryAssign" 
-                && currentStep.RegionId == i;
-            
-            var nodeClass = isCurrentRegion ? "region-node current-region" : "region-node";
-            var strokeStyle = isCurrentRegion ? "stroke: #FFD700; stroke-width: 4;" : "";
-            
-            sb.AppendLine($"<circle class='{nodeClass}' cx='{pos.x:F2}' cy='{pos.y:F2}' r='28' fill='{color}' style='{strokeStyle}' />");
-            sb.AppendLine($"<text class='region-label' x='{pos.x:F2}' y='{pos.y:F2}' dominant-baseline='middle'>{i}</text>");
+            sb.AppendLine($"<circle class='{nodeClass}' cx='{pos.x:F2}' cy='{pos.y:F2}' r='28' fill='{color}' style='{nodeStyle}' />");
+            sb.AppendLine($"<text class='region-label' x='{pos.x:F2}' y='{pos.y:F2}' dominant-baseline='middle' fill='{textColor}'>{i}</text>");
         }
 
         sb.AppendLine("</svg>");
         return sb.ToString();
+    }
+
+    private bool UsesObservatoryLayout(int total) => total == 7 && SelectedExample == "observatory";
+
+    private bool ShouldRenderGraph() => Solution is not null;
+
+    private bool HasSelectedExample() => !string.IsNullOrWhiteSpace(SelectedExample);
+
+    private bool ShouldShowConflictIndicator()
+    {
+        var step = GetCurrentStep();
+        return step is not null && step.ActionType == "TryAssign" && !step.IsSafe;
+    }
+
+    private int? GetCurrentEvaluatedRegion()
+    {
+        var step = GetCurrentStep();
+        return step is not null && step.ActionType == "TryAssign"
+            ? step.RegionId
+            : null;
+    }
+
+    private BacktrackingStepDto? GetCurrentStep()
+    {
+        var steps = Solution?.Steps;
+        return steps is not null && CurrentStepIndex >= 0 && CurrentStepIndex < steps.Count
+            ? steps[CurrentStepIndex]
+            : null;
+    }
+
+    private void ResetVisualizationState()
+    {
+        Solution = null;
+        ErrorMessage = null;
+        CurrentStepIndex = -1;
+        TotalBacktracks = 0;
+        IsAutoPlaying = false;
+
+        _autoPlayCts?.Cancel();
+        _autoPlayCts?.Dispose();
+        _autoPlayCts = null;
+    }
+
+    private string GetPreviewNodeFill(int nodeIndex)
+    {
+        if (!UsesObservatoryLayout(RegionCount))
+        {
+            return "#ffffff";
+        }
+
+        return nodeIndex switch
+        {
+            6 => "#ffffff",
+            _ => "#ffffff"
+        };
+    }
+
+    private string GetNodeFill(int nodeIndex, Dictionary<int, string> currentAssignment, BacktrackingStepDto? currentStep)
+    {
+        var isConflictNode = currentStep is not null && currentStep.ConflictingRegion == nodeIndex && !currentStep.IsSafe;
+        var isCurrentNode = currentStep is not null && currentStep.ActionType == "TryAssign" && currentStep.RegionId == nodeIndex;
+
+        if (isConflictNode)
+        {
+            return "rgba(200, 29, 37, 0.12)";
+        }
+
+        if (isCurrentNode && !currentStep!.IsSafe)
+        {
+            return "#ffdad6";
+        }
+
+        if (currentAssignment.TryGetValue(nodeIndex, out var assignedColor))
+        {
+            return GetColorHexFromName(assignedColor);
+        }
+
+        return GetPreviewNodeFill(nodeIndex);
+    }
+
+    private string GetNodeTextColor(int nodeIndex, Dictionary<int, string> currentAssignment, BacktrackingStepDto? currentStep)
+    {
+        var fill = GetNodeFill(nodeIndex, currentAssignment, currentStep).ToLowerInvariant();
+
+        return fill switch
+        {
+            "#c81d25" => "#ffffff",
+            "#26b6d2" => "#ffffff",
+            "#22c55e" => "#ffffff",
+            "#1b3b5a" => "#ffffff",
+            _ => "#12324a"
+        };
+    }
+
+    private string GetNodeClass(int nodeIndex, Dictionary<int, string> currentAssignment, BacktrackingStepDto? currentStep)
+    {
+        var classes = new List<string> { "region-node" };
+
+        if (currentStep is not null && currentStep.ActionType == "TryAssign" && currentStep.RegionId == nodeIndex)
+        {
+            classes.Add("current-region");
+        }
+
+        if (currentStep is not null && currentStep.ConflictingRegion == nodeIndex && !currentStep.IsSafe)
+        {
+            classes.Add("conflict-region");
+        }
+
+        if (!currentAssignment.ContainsKey(nodeIndex) && UsesObservatoryLayout(RegionCount) && nodeIndex == 6)
+        {
+            classes.Add("placeholder-region");
+        }
+
+        return string.Join(" ", classes);
+    }
+
+    private string GetNodeStyle(int nodeIndex, Dictionary<int, string> currentAssignment, BacktrackingStepDto? currentStep)
+    {
+        var styles = new List<string>
+        {
+            "filter: drop-shadow(0 10px 14px rgba(17, 24, 39, 0.12))"
+        };
+
+        if (currentStep is not null && currentStep.ActionType == "TryAssign" && currentStep.RegionId == nodeIndex)
+        {
+            styles.Add("stroke: rgba(255,255,255,0.9)");
+            styles.Add("stroke-width: 4");
+        }
+        else if (currentStep is not null && currentStep.ConflictingRegion == nodeIndex && !currentStep.IsSafe)
+        {
+            styles.Add("stroke: #d9534f");
+            styles.Add("stroke-width: 2");
+            styles.Add("stroke-dasharray: 6 5");
+        }
+        else if (!currentAssignment.ContainsKey(nodeIndex) && UsesObservatoryLayout(RegionCount) && nodeIndex == 6)
+        {
+            styles.Add("stroke: #d9534f");
+            styles.Add("stroke-width: 2");
+            styles.Add("stroke-dasharray: 6 5");
+        }
+        else
+        {
+            styles.Add("stroke: #d8e0ea");
+            styles.Add("stroke-width: 2.5");
+        }
+
+        return string.Join("; ", styles);
     }
 
     // Step navigation methods
@@ -641,7 +850,7 @@
 
     private async Task PrevStep()
     {
-        if (CurrentStepIndex > 0)
+        if (CurrentStepIndex >= 0)
         {
             CurrentStepIndex--;
             
@@ -661,7 +870,7 @@
 
     private async Task RestartVisualization()
     {
-        CurrentStepIndex = 0;
+        CurrentStepIndex = -1;
         
         // Stop autoplay if active
         if (IsAutoPlaying)
@@ -735,6 +944,11 @@
         {
             SetPlaybackSpeed(speed);
         }
+    }
+
+    private int GetDisplayedStepNumber()
+    {
+        return Math.Max(CurrentStepIndex + 1, 0);
     }
 
     // Step description and badge helper methods
