@@ -8,7 +8,7 @@ builder.Services.AddRazorComponents()
 
 builder.Services.AddScoped(sp => 
 {
-    var apiBaseUrl = builder.Configuration["ApiBaseUrl"] ?? "https://localhost:7158";
+    var apiBaseUrl = builder.Configuration["ApiBaseUrl"] ?? "https://localhost:5180";
     return new HttpClient { BaseAddress = new Uri(apiBaseUrl) };
 });
 

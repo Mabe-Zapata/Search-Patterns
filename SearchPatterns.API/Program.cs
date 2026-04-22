@@ -16,6 +16,10 @@ builder.Services.AddScoped<SearchPatterns.Application.WaterJug.Validators.IWater
 builder.Services.AddScoped<SearchPatterns.Domain.FarmerPuzzle.Interfaces.IFarmerBfsSolver,
 	SearchPatterns.Application.FarmerPuzzle.Services.FarmerBfsSolverService>();
 
+// Register services for Missionaries and Cannibals
+builder.Services.AddScoped<SearchPatterns.Domain.MissionariesAndCannibals.Interfaces.IMissionariesBfsSolver,
+	SearchPatterns.Application.MissionariesAndCannibals.Services.MissionariesBfsSolverService>();
+
 // Register services for Map Coloring functionality
 builder.Services.AddScoped<SearchPatterns.Domain.MapColoring.Interfaces.IBacktrackingSolver, SearchPatterns.Application.MapColoring.Services.BacktrackingSolverService>();
 builder.Services.AddScoped<SearchPatterns.Domain.MapColoring.Interfaces.IGraphValidator, SearchPatterns.Application.MapColoring.Services.GraphValidator>();
