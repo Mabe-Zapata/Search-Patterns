@@ -1,0 +1,319 @@
+@page "/city-routing"
+@using System.Text.Json
+@inject HttpClient Http
+
+<PageTitle>Buscador de Rutas Avanzado</PageTitle>
+
+<div class="breadcrumb">
+    <span>Biblioteca</span> <span class="separator">></span> <span class="active">Navegación de Ciudades</span>
+</div>
+
+<div class="header-section">
+    <h1>Rutas Inteligentes</h1>
+    <p class="subtitle">Descubre el trayecto óptimo entre ciudades utilizando nuestro motor heurístico A*. Diseñado para encontrar el camino más eficiente con precisión satelital.</p>
+</div>
+
+<div class="grid xl:grid-cols-12 gap-8 mb-12">
+    <!-- Form Card -->
+    <div class="xl:col-span-4">
+        <div class="bg-white rounded-3xl p-8 shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-slate-100 h-full flex flex-col">
+            <div class="flex items-center gap-4 mb-8">
+                <div class="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-indigo-600">explore</span>
+                </div>
+                <h2 class="text-xl font-bold text-slate-800 font-headline">Coordenadas</h2>
+            </div>
+
+            @if(availableCities == null)
+            {
+                <div class="flex flex-col items-center justify-center py-12 gap-4 flex-1">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                    <p class="text-indigo-600 font-bold animate-pulse text-sm">Sincronizando red...</p>
+                </div>
+            }
+            else
+            {
+                <div class="space-y-6 flex-1">
+                    <div class="form-group relative">
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-sm text-indigo-500">my_location</span>
+                            Punto de Origen
+                        </label>
+                        <div class="relative group/select">
+                            <select class="custom-select w-full bg-slate-50 hover:bg-slate-100 border border-slate-200 focus:border-indigo-500 text-slate-800 rounded-xl px-4 py-3 appearance-none outline-none transition-all cursor-pointer font-semibold shadow-sm" @bind="originCity">
+                                <option value="" disabled selected>Seleccione origen</option>
+                                @foreach(var city in availableCities)
+                                {
+                                    <option value="@city">@city</option>
+                                }
+                            </select>
+                            <span class="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/select:text-indigo-500 pointer-events-none transition-colors">expand_more</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-center -my-3 relative z-10">
+                        <div class="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-indigo-500 shadow-sm transition-transform hover:rotate-180 duration-500 cursor-pointer" @onclick="SwapCities">
+                            <span class="material-symbols-outlined text-xl">swap_vert</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group relative">
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-sm text-pink-500">location_on</span>
+                            Destino Final
+                        </label>
+                        <div class="relative group/select">
+                            <select class="custom-select w-full bg-slate-50 hover:bg-slate-100 border border-slate-200 focus:border-pink-500 text-slate-800 rounded-xl px-4 py-3 appearance-none outline-none transition-all cursor-pointer font-semibold shadow-sm" @bind="destinationCity">
+                                <option value="" disabled selected>Seleccione destino</option>
+                                @foreach(var city in availableCities)
+                                {
+                                    <option value="@city">@city</option>
+                                }
+                            </select>
+                            <span class="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/select:text-pink-500 pointer-events-none transition-colors">expand_more</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="mt-8 w-full relative overflow-hidden rounded-xl bg-indigo-600 text-white font-bold py-4 px-6 transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-600/20" @onclick="CalculateRoute" disabled="@(isLoading || IsButtonDisabled)">
+                    <div class="relative flex items-center justify-center gap-3">
+                        @if(isLoading)
+                        {
+                            <span class="material-symbols-outlined animate-spin">refresh</span>
+                            <span class="tracking-wide">Procesando...</span>
+                        }
+                        else
+                        {
+                            <span class="material-symbols-outlined">satellite_alt</span>
+                            <span class="tracking-wide">Calcular Ruta Óptima</span>
+                        }
+                    </div>
+                </button>
+            }
+            
+            @if (errorMsg != null)
+            {
+                <div class="mt-6 bg-red-50 border border-red-100 text-red-600 p-4 rounded-xl flex items-start gap-3">
+                    <span class="material-symbols-outlined text-red-500">error</span>
+                    <span class="text-sm font-semibold">@errorMsg</span>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Visualizer Card -->
+    <div class="xl:col-span-8">
+        <div class="bg-white rounded-3xl p-8 md:p-10 shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-slate-100 h-full flex flex-col relative overflow-hidden min-h-[500px]">
+            <!-- Decorative dots background -->
+            <div class="absolute inset-0 opacity-[0.15] pointer-events-none" style="background-image: radial-gradient(#94a3b8 2px, transparent 2px); background-size: 32px 32px;"></div>
+            
+            <div class="relative z-10 flex flex-col h-full">
+                @if (result != null)
+                {
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-12">
+                        <div>
+                            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-50 text-green-700 font-bold text-xs uppercase tracking-wider mb-3 border border-green-200">
+                                <span class="material-symbols-outlined text-sm">task_alt</span>
+                                Ruta Exitosa
+                            </div>
+                            <h3 class="text-2xl font-black text-slate-800 font-headline">Trayectoria Generada</h3>
+                        </div>
+                        <div class="bg-indigo-50 rounded-2xl p-4 text-center min-w-[140px] border border-indigo-100">
+                            <div class="text-[10px] text-indigo-500 font-black uppercase tracking-widest mb-1">Distancia Total</div>
+                            <div class="text-3xl font-black text-indigo-900">@result.TotalDistanceKm <span class="text-sm text-indigo-500 font-bold">km</span></div>
+                        </div>
+                    </div>
+
+                    <div class="flex-1 flex items-center justify-center py-10 relative overflow-x-auto pb-8">
+                        <!-- Línea conectora de fondo -->
+                        <div class="absolute top-1/2 left-10 right-10 h-1 bg-slate-100 -translate-y-1/2 rounded-full hidden md:block"></div>
+
+                        <div class="path-timeline flex flex-col md:flex-row items-center justify-start md:justify-center gap-y-6 md:gap-x-2 relative z-10 min-w-max px-4 md:px-8 mx-auto w-fit">
+                            @{
+                                // Fallback robusto: si el backend devuelve un solo string "A -> B -> C", lo separamos correctamente aquí
+                                var pathString = string.Join(" ", result.RouteDescriptions);
+                                var cities = pathString.Split(new[] { "->" }, StringSplitOptions.RemoveEmptyEntries)
+                                                       .Select(c => c.Trim())
+                                                       .Where(c => !string.IsNullOrEmpty(c))
+                                                       .ToList();
+
+                                for (int i = 0; i < cities.Count; i++)
+                                {
+                                    var city = cities[i];
+                                    var isFirst = i == 0;
+                                    var isLast = i == cities.Count - 1;
+                                    
+                                    <!-- Nodo de Ciudad -->
+                                    <div class="node-container animate-bounce-in shrink-0 relative group z-20" style="animation-delay: @(i * 150)ms">
+                                        <!-- Efecto de Hover/Resplandor -->
+                                        <div class="absolute inset-0 rounded-2xl blur-lg transition-all opacity-0 group-hover:opacity-100 @(isFirst ? "bg-indigo-400/40" : isLast ? "bg-emerald-400/40" : "bg-cyan-400/40")"></div>
+                                        
+                                        <div class="relative bg-white border-2 @(isFirst ? "border-indigo-500 shadow-indigo-100" : isLast ? "border-emerald-500 shadow-emerald-100" : "border-cyan-400 shadow-cyan-100") rounded-2xl px-4 py-3 shadow-md whitespace-nowrap flex flex-col items-center gap-1 transition-transform hover:-translate-y-1 cursor-default">
+                                            
+                                            <!-- Icono Animado -->
+                                            <div class="w-8 h-8 rounded-lg flex items-center justify-center shadow-inner @(isFirst ? "bg-indigo-50 text-indigo-600" : isLast ? "bg-emerald-50 text-emerald-600" : "bg-cyan-50 text-cyan-600") relative overflow-hidden group-hover:scale-110 transition-transform duration-500">
+                                                @if(isFirst) { 
+                                                    <span class="material-symbols-outlined text-lg">flight_takeoff</span>
+                                                }
+                                                else if(isLast) { 
+                                                    <span class="material-symbols-outlined text-lg">flight_land</span> 
+                                                }
+                                                else { 
+                                                    <span class="material-symbols-outlined text-base">location_on</span> 
+                                                }
+                                                <div class="absolute inset-0 bg-gradient-to-b from-white/60 to-transparent opacity-50"></div>
+                                            </div>
+
+                                            <!-- Información -->
+                                            <div class="text-center">
+                                                <span class="block font-black text-slate-800 text-sm font-headline tracking-tight mt-1">@city</span>
+                                                <div class="inline-block mt-0.5 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest @(isFirst ? "bg-indigo-100 text-indigo-700" : isLast ? "bg-emerald-100 text-emerald-700" : "bg-cyan-100 text-cyan-700")">
+                                                    @(isFirst ? "Punto de Origen" : isLast ? "Destino Final" : "Ciudad en Ruta")
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Flecha Conectora -->
+                                    @if (!isLast)
+                                    {
+                                        <div class="arrow-container hidden md:flex items-center px-1 flex-1 animate-fade-in min-w-[24px] md:min-w-[32px] max-w-[60px]" style="animation-delay: @(i * 150 + 75)ms; z-index: 10;">
+                                            <!-- Línea principal con degradado -->
+                                            <div class="h-1.5 w-full bg-gradient-to-r from-indigo-200 via-cyan-300 to-emerald-200 relative rounded-full shadow-inner">
+                                                <!-- Efecto de luz corriendo -->
+                                                <div class="absolute inset-0 overflow-hidden rounded-full">
+                                                     <div class="h-full w-1/2 bg-white/80 blur-[1px] animate-shimmer"></div>
+                                                </div>
+                                                <!-- Punta de flecha robusta -->
+                                                <div class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1 border-y-[4px] border-y-transparent border-l-[6px] border-l-emerald-300 drop-shadow-md"></div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Conector vertical para móviles -->
+                                        <div class="arrow-container-mobile md:hidden h-8 w-1.5 bg-gradient-to-b from-indigo-200 via-cyan-300 to-emerald-200 rounded-full animate-fade-in relative shadow-inner" style="animation-delay: @(i * 150 + 75)ms">
+                                            <div class="absolute inset-0 overflow-hidden rounded-full">
+                                                <div class="w-full h-1/2 bg-white/80 blur-[1px] animate-shimmer-vertical"></div>
+                                            </div>
+                                            <div class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1 border-x-[4px] border-x-transparent border-t-[6px] border-t-emerald-300 drop-shadow-md"></div>
+                                        </div>
+                                    }
+                                }
+                            }
+                        </div>
+                    </div>
+                }
+                else if (!isLoading)
+                {
+                    <div class="h-full flex flex-col items-center justify-center text-center p-12">
+                        <div class="w-20 h-20 mb-6 rounded-full bg-slate-50 flex items-center justify-center border border-slate-100">
+                            <span class="material-symbols-outlined text-4xl text-slate-300">travel_explore</span>
+                        </div>
+                        <h3 class="text-xl font-bold text-slate-700 mb-2 font-headline">Esperando Coordenadas</h3>
+                        <p class="text-slate-500 text-sm max-w-sm">Selecciona tu punto de partida y destino para trazar la ruta óptima a través de la red de ciudades.</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Explicación Sencilla del Algoritmo -->
+<div class="insight-card mb-12">
+    <div class="insight-icon">
+        <span class="material-symbols-outlined">lightbulb</span>
+    </div>
+    <div class="insight-content">
+        <h4>¿Cómo funciona nuestro motor A*?</h4>
+        <p>A diferencia de buscar a ciegas por todos los caminos, el algoritmo <strong>A* (A-Estrella)</strong> es inteligente. Para cada posible ciudad intermedia, calcula dos valores matemáticos:</p>
+        <ul>
+            <li><strong>Distancia real:</strong> Cuántos kilómetros de carretera ya hemos conducido desde el origen.</li>
+            <li><strong>Estimación satelital (Heurística):</strong> Cuántos kilómetros faltan "en línea recta" desde esa ciudad hacia el destino final, usando sus coordenadas geográficas.</li>
+        </ul>
+        <p>Suma ambos números y <strong>siempre prioriza explorar la ciudad con el total más bajo</strong>. Así, logra encontrar el trayecto más corto posible sin tener que revisar el mapa entero, garantizando rapidez y precisión.</p>
+    </div>
+</div>
+
+@code {
+    private List<string>? availableCities;
+    private string originCity = "";
+    private string destinationCity = "";
+    
+    // Hardcoded to A* (1) for this game
+    private int algorithm = 1; 
+
+    private PathResultDto? result;
+    private bool isLoading;
+    private string? errorMsg;
+
+    private bool IsButtonDisabled => 
+        string.IsNullOrEmpty(originCity) || 
+        string.IsNullOrEmpty(destinationCity) || 
+        originCity == destinationCity;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            availableCities = await Http.GetFromJsonAsync<List<string>>("api/CityRouting/cities");
+        }
+        catch (Exception ex)
+        {
+            errorMsg = "Error al cargar las ciudades: " + ex.Message;
+        }
+    }
+
+    private void SwapCities()
+    {
+        if (string.IsNullOrEmpty(originCity) && string.IsNullOrEmpty(destinationCity)) return;
+        var temp = originCity;
+        originCity = destinationCity;
+        destinationCity = temp;
+        result = null;
+    }
+
+    private async Task CalculateRoute()
+    {
+        isLoading = true;
+        errorMsg = null;
+        result = null;
+
+        // Pequeño retraso artificial para que se vea la animación de "Calculando..." y la experiencia sea más premium
+        await Task.Delay(600);
+
+        try
+        {
+            var request = new {
+                StartCity = originCity,
+                TargetCity = destinationCity,
+                Algorithm = algorithm // Siempre enviará 1 (AStar)
+            };
+
+            var response = await Http.PostAsJsonAsync("api/CityRouting/calculate", request);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                result = await response.Content.ReadFromJsonAsync<PathResultDto>();
+            }
+            else
+            {
+                errorMsg = await response.Content.ReadAsStringAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMsg = "Error de red al calcular la ruta: " + ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    public class PathResultDto
+    {
+        public bool IsSuccessful { get; set; }
+        public List<string> RouteDescriptions { get; set; } = new();
+        public double TotalDistanceKm { get; set; }
+        public string Message { get; set; } = string.Empty;
+    }
+}
