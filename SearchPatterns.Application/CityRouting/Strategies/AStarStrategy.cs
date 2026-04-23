@@ -12,13 +12,11 @@ public class AStarStrategy : IShortestPathStrategy
 {
     public PathResult FindShortestPath(CityGraph graph, CityNode startNode, CityNode targetNode)
     {
-        // 1. Inicialización
         var gScore = new Dictionary<string, double>();
-        // fScore = gScore + heurística
         var fScore = new Dictionary<string, double>(); 
         var cameFrom = new Dictionary<string, string>();
+        var explorationSteps = new List<ExplorationStep>();
         
-        // Priority Queue (NodeName, fScore)
         var openSet = new PriorityQueue<string, double>();
 
         foreach (var node in graph.Nodes)
@@ -32,20 +30,30 @@ public class AStarStrategy : IShortestPathStrategy
         
         openSet.Enqueue(startNode.Name, fScore[startNode.Name]);
 
-        int nodesEvaluated = 0;
+        int stepCount = 0;
 
-        // 2. Ciclo principal
+        explorationSteps.Add(new ExplorationStep
+        {
+            Step = ++stepCount,
+            City = startNode.Name,
+            G = 0,
+            H = HeuristicCostEstimate(startNode, targetNode),
+            F = fScore[startNode.Name],
+            FromCity = "-",
+            Reason = "Punto de partida"
+        });
+
         while (openSet.Count > 0)
         {
             var currentName = openSet.Dequeue();
-            nodesEvaluated++;
 
             if (currentName == targetNode.Name)
             {
                 var (path, pathString) = ReconstructPath(cameFrom, currentName);
                 return PathResult.Success(
                     pathString, 
-                    gScore[targetNode.Name] // retornamos el costo G real
+                    gScore[targetNode.Name],
+                    explorationSteps
                 );
             }
 
@@ -55,16 +63,25 @@ public class AStarStrategy : IShortestPathStrategy
                 var neighborName = edge.Destination.Name;
                 double tentativeGScore = gScore[currentName] + edge.DistanceKm;
 
-                // Si encontramos un camino real más corto
                 if (tentativeGScore < gScore[neighborName])
                 {
                     cameFrom[neighborName] = currentName;
                     gScore[neighborName] = tentativeGScore;
                     
-                    // fScore = costo real G + distancia estimada Euclidiana al objetivo
                     fScore[neighborName] = gScore[neighborName] + HeuristicCostEstimate(edge.Destination, targetNode);
                     
                     openSet.Enqueue(neighborName, fScore[neighborName]);
+
+                    explorationSteps.Add(new ExplorationStep
+                    {
+                        Step = ++stepCount,
+                        City = neighborName,
+                        G = gScore[neighborName],
+                        H = HeuristicCostEstimate(edge.Destination, targetNode),
+                        F = fScore[neighborName],
+                        FromCity = currentName,
+                        Reason = $"f={fScore[neighborName]:F1} (g={tentativeGScore:F1} + h={HeuristicCostEstimate(edge.Destination, targetNode):F1})"
+                    });
                 }
             }
         }
@@ -72,10 +89,6 @@ public class AStarStrategy : IShortestPathStrategy
         return PathResult.Failure("No se encontró una ruta hacia el destino con A*.");
     }
 
-    /// <summary>
-    /// Calcula la estimación de distancia restante basándose en línea recta ficticia mediante las coordenadas.
-    /// Esta es la "conjetura educada" o heurística que hace especial al algoritmo A*.
-    /// </summary>
     private double HeuristicCostEstimate(CityNode current, CityNode target)
     {
         return current.DistanceTo(target);
