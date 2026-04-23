@@ -1,0 +1,258 @@
+@page "/missionaries"
+@using SearchPatterns.Application.MissionariesAndCannibals.DTOs
+@inject HttpClient Http
+
+<PageTitle>Misioneros y Caníbales | Algoritmos de Búsqueda</PageTitle>
+
+<div class="breadcrumb">
+    <span>Biblioteca</span>
+    <span class="separator">›</span>
+    <span class="active">Misioneros y Caníbales</span>
+</div>
+
+<header class="header-section">
+    <h1>Problema de Misioneros y Caníbales</h1>
+    <p class="subtitle">
+        Tres misioneros y tres caníbales deben cruzar un río usando un bote que
+        transporta como máximo 2 personas. En ninguna orilla los caníbales pueden
+        superar en número a los misioneros (a menos que no haya misioneros).
+        El algoritmo <strong>BFS</strong> garantiza la secuencia óptima de cruces.
+    </p>
+</header>
+
+<div class="puzzle-layout">
+
+    <div class="scene-card">
+        <span class="badge @(Solution is not null && Solution.IsSolvable ? "active" : "inactive")">
+            @(Solution is not null && Solution.IsSolvable ? "SIMULACIÓN ACTIVA" : "SIMULACIÓN INACTIVA")
+        </span>
+
+        <div class="river-scene">
+
+            <div class="bank bank-left">
+                <div class="bank-label"><i class='bx bxs-tree' ></i> Orilla Izquierda</div>
+                <div class="entities">
+                    @{
+                        int ml = CurrentStep?.MissionariesLeft ?? 3;
+                        int cl = CurrentStep?.CannibalsLeft ?? 3;
+                    }
+                    @for (int i = 0; i < ml; i++)
+                    {
+                        <div class="entity missionary"><i class='bx bxs-user icon-missionary'></i><span>Misionero</span></div>
+                    }
+                    @for (int i = 0; i < cl; i++)
+                    {
+                        <div class="entity cannibal"><i class='bx bxs-skull icon-cannibal'></i><span>Caníbal</span></div>
+                    }
+                </div>
+            </div>
+
+            <div class="river">
+                <div class="river-waves"><i class='bx bx-water'></i><i class='bx bx-water'></i><i class='bx bx-water'></i></div>
+                <div class="boat @(IsBoatRight ? "boat-right" : "boat-left")">
+                    <i class='bx bxs-boat icon-boat'></i>
+                </div>
+                <div class="river-label">Río</div>
+            </div>
+
+            <div class="bank bank-right">
+                <div class="bank-label"><i class='bx bxs-home'></i> Orilla Derecha</div>
+                <div class="entities">
+                    @{
+                        int mr = CurrentStep?.MissionariesRight ?? 0;
+                        int cr = CurrentStep?.CannibalsRight ?? 0;
+                    }
+                    @for (int i = 0; i < mr; i++)
+                    {
+                        <div class="entity missionary"><i class='bx bxs-user icon-missionary'></i><span>Misionero</span></div>
+                    }
+                    @for (int i = 0; i < cr; i++)
+                    {
+                        <div class="entity cannibal"><i class='bx bxs-skull icon-cannibal'></i><span>Caníbal</span></div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        @if (CurrentStep is not null)
+        {
+            <div class="action-banner">
+                <span class="action-step">Paso @CurrentStep.StepNumber</span>
+                <span class="action-text">@CurrentStep.Action</span>
+            </div>
+        }
+    </div>
+
+    <div class="controls-column">
+        <div class="controls-card">
+            <div class="card-title">Controles</div>
+
+            <button class="btn btn-primary fluid" @onclick="SolveAsync" disabled="@IsLoading">
+                @(IsLoading ? "Resolviendo..." : "Resolver con BFS")
+            </button>
+
+            @if (Solution is not null && Solution.IsSolvable)
+            {
+                <div class="nav-controls">
+                    <button class="btn btn-outline" @onclick="PrevStep" disabled="@(CurrentStepIndex <= 0)"><i class='bx bx-chevron-left'></i> Anterior</button>
+                    <span class="step-counter">@(CurrentStepIndex + 1) / @Solution.TotalSteps</span>
+                    <button class="btn btn-outline" @onclick="NextStep" disabled="@(CurrentStepIndex >= Solution.TotalSteps - 1)">Siguiente <i class='bx bx-chevron-right'></i></button>
+                </div>
+
+                <button class="btn btn-secondary fluid" @onclick="ToggleAutoPlay">
+                    @if (IsAutoPlaying) { <i class='bx bx-stop'></i> <text>Detener</text> } else { <i class='bx bx-fast-forward'></i> <text>Reproducir Auto</text> }
+                </button>
+            }
+
+            @if (!string.IsNullOrEmpty(ErrorMessage))
+            {
+                <div class="error-msg">@ErrorMessage</div>
+            }
+        </div>
+
+        <div class="insight-card">
+            <h4><i class='bx bxs-bulb'></i> ¿Por qué BFS?</h4>
+            <p>
+                BFS explora todos los estados a profundidad <em>n</em> antes de pasar a <em>n+1</em>,
+                garantizando así la solución con el menor número de cruces.
+                Es ideal para espacios de estados finitos como este puzzle clásico.
+            </p>
+        </div>
+
+        @if (Solution is not null && Solution.IsSolvable)
+        {
+            <div class="stats-card">
+                <div class="stat">
+                    <span class="stat-value">@Solution.TotalSteps</span>
+                    <span class="stat-label">Pasos totales</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value">BFS</span>
+                    <span class="stat-label">Algoritmo</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value">3+3</span>
+                    <span class="stat-label">M + C</span>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+
+@if (Solution is not null && Solution.IsSolvable)
+{
+    <section class="trace-section">
+        <div class="trace-header">
+            <h2>Traza de Ejecución BFS</h2>
+        </div>
+        <div class="trace-list">
+            @for (int i = 0; i <= CurrentStepIndex && i < Solution.Steps.Count; i++)
+            {
+                var step = Solution.Steps[i];
+                <div class="trace-item @(i == CurrentStepIndex ? "active" : "")">
+                    <div class="step-num">@step.StepNumber.ToString("D2")</div>
+                    <div class="step-body">
+                        <div class="step-action">@step.Action <span class="badge-small">ACCIÓN</span></div>
+                        <div class="step-desc">@step.Description</div>
+                    </div>
+                    <div class="step-icons">
+                        <span title="Misioneros Izq"><i class='bx bxs-user icon-missionary'></i> Izq: @step.MissionariesLeft</span>
+                        <span title="Caníbales Izq"><i class='bx bxs-skull icon-cannibal'></i> Izq: @step.CannibalsLeft</span>
+                        <span title="Misioneros Der"><i class='bx bxs-user icon-missionary'></i> Der: @step.MissionariesRight</span>
+                        <span title="Caníbales Der"><i class='bx bxs-skull icon-cannibal'></i> Der: @step.CannibalsRight</span>
+                        <span title="Bote"><i class='bx bxs-boat'></i> @step.BoatPosition</span>
+                    </div>
+                </div>
+            }
+
+            @if (CurrentStepIndex >= Solution.TotalSteps - 1)
+            {
+                <div class="trace-complete"><i class='bx bxs-check-circle'></i> ¡Todos cruzaron el río con éxito!</div>
+            }
+        </div>
+    </section>
+}
+
+@code {
+    private SolveMissionariesResponseDto? Solution { get; set; }
+    private int CurrentStepIndex { get; set; } = -1;
+    private bool IsLoading { get; set; }
+    private bool IsAutoPlaying { get; set; }
+    private string? ErrorMessage { get; set; }
+
+    private MoveStepDto? CurrentStep =>
+        Solution?.Steps.Count > 0 && CurrentStepIndex >= 0 && CurrentStepIndex < Solution.Steps.Count
+            ? Solution.Steps[CurrentStepIndex]
+            : null;
+
+    private bool IsBoatRight =>
+        CurrentStep?.BoatPosition == "Right";
+
+    private async Task SolveAsync()
+    {
+        IsLoading = true;
+        ErrorMessage = null;
+        Solution = null;
+        CurrentStepIndex = -1;
+        IsAutoPlaying = false;
+
+        try
+        {
+            var response = await Http.GetFromJsonAsync<SolveMissionariesResponseDto>("api/missionaries/solve");
+
+            if (response is null)
+            {
+                ErrorMessage = "Error al procesar la respuesta del servidor.";
+            }
+            else if (!response.IsSolvable)
+            {
+                ErrorMessage = response.ErrorMessage ?? "No se encontró solución.";
+            }
+            else
+            {
+                Solution = response;
+                CurrentStepIndex = 0;
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private void NextStep()
+    {
+        if (Solution is not null && CurrentStepIndex < Solution.TotalSteps - 1)
+            CurrentStepIndex++;
+        else
+            IsAutoPlaying = false;
+    }
+
+    private void PrevStep()
+    {
+        if (CurrentStepIndex > 0)
+        {
+            CurrentStepIndex--;
+            IsAutoPlaying = false;
+        }
+    }
+
+    private async Task ToggleAutoPlay()
+    {
+        IsAutoPlaying = !IsAutoPlaying;
+
+        while (IsAutoPlaying && Solution is not null && CurrentStepIndex < Solution.TotalSteps - 1)
+        {
+            NextStep();
+            StateHasChanged();
+            await Task.Delay(900);
+        }
+
+        IsAutoPlaying = false;
+    }
+}

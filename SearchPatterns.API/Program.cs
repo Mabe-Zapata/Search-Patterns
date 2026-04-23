@@ -12,9 +12,18 @@ builder.Services.AddOpenApi();
 builder.Services.AddScoped<SearchPatterns.Domain.WaterJug.Interfaces.IBfsSolver, SearchPatterns.Application.WaterJug.Services.BfsSolverService>();
 builder.Services.AddScoped<SearchPatterns.Application.WaterJug.Validators.IWaterJugValidator, SearchPatterns.Application.WaterJug.Validators.WaterJugValidator>();
 
+// Register services for City Routing functionality
+builder.Services.AddScoped<SearchPatterns.Domain.CityRouting.Interfaces.IShortestPathStrategy, SearchPatterns.Application.CityRouting.Strategies.DijkstraStrategy>();
+builder.Services.AddScoped<SearchPatterns.Domain.CityRouting.Interfaces.IShortestPathStrategy, SearchPatterns.Application.CityRouting.Strategies.AStarStrategy>();
+builder.Services.AddScoped<SearchPatterns.Application.CityRouting.Services.ICityRoutingService, SearchPatterns.Application.CityRouting.Services.CityRoutingService>();
+
 //registe services for FarmerPuzzle
 builder.Services.AddScoped<SearchPatterns.Domain.FarmerPuzzle.Interfaces.IFarmerBfsSolver,
 	SearchPatterns.Application.FarmerPuzzle.Services.FarmerBfsSolverService>();
+
+// Register services for Missionaries and Cannibals
+builder.Services.AddScoped<SearchPatterns.Domain.MissionariesAndCannibals.Interfaces.IMissionariesBfsSolver,
+	SearchPatterns.Application.MissionariesAndCannibals.Services.MissionariesBfsSolverService>();
 
 // Register services for Map Coloring functionality
 builder.Services.AddScoped<SearchPatterns.Domain.MapColoring.Interfaces.IBacktrackingSolver, SearchPatterns.Application.MapColoring.Services.BacktrackingSolverService>();
